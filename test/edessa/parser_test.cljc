@@ -23,7 +23,11 @@
 (deftest basic-building-blocks
  (let [r (epsilon "asdf")]
   (is (success? r))
-  (is (= [[nil] "asdf"] r))))
+  (is (= [[nil] "asdf"] r)))
+
+ (let [p (match \a)]
+  (is (success? (p "aaa")))
+  (is (input-remaining? (p "aaa")))))
 
 (deftest metadata-tests
  (let [p (match \a)]
