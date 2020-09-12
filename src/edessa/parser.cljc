@@ -1,4 +1,4 @@
-(ns spiralweb.parser
+(ns edessa.parser
  (:require [clojure.core.reducers :refer [fold]]
            [taoensso.timbre :as t :refer [debug error]]))
 
