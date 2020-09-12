@@ -19,7 +19,7 @@
 
 (defn input-consumed? [r]
  (and (success? r)
-      (not (empty? (second r)))))
+      (empty? (second r))))
 
 (def input-remaining? (comp not input-consumed?))
 
