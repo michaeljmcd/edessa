@@ -23,6 +23,9 @@
 
 (def input-remaining? (comp not input-consumed?))
 
+(def remaining second)
+(def result first)
+
 (defn parser-name [parser] (-> parser meta :parser))
 
 (defn match [c]
