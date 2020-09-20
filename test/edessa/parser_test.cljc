@@ -47,7 +47,7 @@
  (let [p (match \a)]
   (is (= "Matches a" (parser-name p)))))
 
-(deftest core-combinators
+(deftest star-combinator
  (let [p (zero-or-more (match \a))
        r0 (p "babc")]
   (is (success? r0))
@@ -55,3 +55,39 @@
   (is (= "babc" (remaining r0)))
   (is (success? (p "aaaa")))
   (is (= [] (remaining (p "aaaa"))))))
+
+(deftest choice-combinator
+ (let [p (choice (match \a) (match \b))
+       r0 (p "baa")
+       r1 (p "abb")
+       r2 (p "cab")]
+   (is (success? r0))
+   (is (= [\b] (result r0)))
+   (is (= [\a \a] (remaining r0)))
+
+   (is (success? r1))
+   (is (= [\a] (result r1)))
+   (is (= [\b \b] (remaining r1)))
+
+   (is (failure? r2)))
+
+ (let [p (choice)]
+  (is (failure? (p "aaa"))))
+
+ (let [p (choice (match \a))
+       r0 (p "ab")
+       r1 (p "ba")]
+  (is (success? r0))
+  (is (= [\b] (remaining r0)))
+  (is (= [\a] (result r0)))
+
+  (is (failure? r1)))
+
+  (let [p (choice (match \a) (match \b) (match \c) (match \d))
+        r0 (p "czz")
+        r1 (p "fgh")]
+    (is (success? r0))
+    (is (= [\c] (result r0)))
+    (is (= [\z \z] (remaining r0)))
+
+    (is (failure? r1))))
