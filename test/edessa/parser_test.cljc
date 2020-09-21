@@ -91,3 +91,15 @@
     (is (= [\z \z] (remaining r0)))
 
     (is (failure? r1))))
+
+(deftest optional-combinator
+ (let [p (optional (match \a))
+       r0 (p "abc")
+       r1 (p "dabc")]
+    (is (success? r0))
+    (is (= [\a] (result r0)))
+    (is (= [\b \c] (remaining r0)))
+
+    (is (success? r1))
+    (is (= [nil] (result r1)))
+    (is (= "dabc" (remaining r1)))))
