@@ -103,3 +103,23 @@
     (is (success? r1))
     (is (= [nil] (result r1)))
     (is (= "dabc" (remaining r1)))))
+
+(deftest one-of-operator
+ (let [p (one-of [\a \b \c])
+       r0 (p "cde")
+       r1 (p "zzz")]
+  (is (success? r0))
+  (is (= [\d \e] (remaining r0)))
+  (is (= [\c] (result r0)))
+
+  (is (failure? r1))))
+
+(deftest using-combinator
+ (let [p (using (match \a) (fn [x] {:result x}))
+       r0 (p "abc")
+       r1 (p "dabc")]
+    (is (success? r0))
+    (is (= [\b \c] (remaining r0)))
+    (is (= [{:result [\a]}] (result r0)))
+
+    (is (failure? r1))))
