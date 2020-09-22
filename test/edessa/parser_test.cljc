@@ -123,3 +123,42 @@
     (is (= [{:result [\a]}] (result r0)))
 
     (is (failure? r1))))
+
+(deftest then-combinator
+ (let [p (then)
+       r0 (p "asdf")]
+   (is (success? r0))
+   (is (= "asdf" (remaining r0)))
+   (is (= [nil] (result r0))))
+
+ (let [p (then (match \a))
+       r0 (p "asdf")]
+  (is (success? r0))
+  (is (= [\s \d \f] (remaining r0)))
+  (is (= [\a] (result r0))))
+
+ (let [p (then (match \a) (match \s))
+       r0 (p "asdf")]
+   (is (success? r0))
+   (is (= [\d \f] (remaining r0)))
+   (is (= [\a \s] (result r0))))
+
+ (let [p (then (match \a) (match \s) (match \d) (match \f))
+       r0 (p "asdf")]
+  (is (success? r0))
+  (is (= [] (remaining r0)))
+  (is (= [nil \a \s \d \f] (result r0)))))
+
+(deftest literal-operator
+ (let [p (literal "aa")
+       r0 (p "aaa")]
+   (is (success? r0))
+   (is (= [\a] (remaining r0)))
+   (is (= [\a \a] (result r0)))))
+
+(deftest plus-combinator
+ (let [p (plus (match \a))
+       r0 (p "aaaab")]
+   (is (success? r0))
+   (is (= [\a \a \a \a] (result r0)))
+   (is (= [\b] (remaining r0)))))
