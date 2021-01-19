@@ -90,11 +90,11 @@
 (defn not-one-of [chars]
   (with-meta
     (fn [inp]
-      (let [[x & xs] inp]
-        (if (or (empty? inp)
+      (let [x (look inp)]
+        (if (or (input-consumed? inp)
                 (some (partial = x) chars))
-          (fail inp)
-          (succeed x xs))))
+          (fail inp (format "Value '%s' is not one of %s" x chars))
+          (advance inp x))))
     {:parser (str "Not one of [" chars "]")}))
 
 (defn zero-or-more [parser]

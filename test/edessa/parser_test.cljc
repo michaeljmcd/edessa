@@ -25,27 +25,32 @@
   (is (not (input-remaining? (succeed 2 nil)))))
 
 (deftest basic-building-blocks
-  (let [r (epsilon "asdf")]
+  (let [r (epsilon (make-input "asdf"))]
     (is (success? r))
     (is (= "asdf" (remaining r)))
-    (is (= [[nil] "asdf"] r)))
+    (is (= {:input "asdf", :position 0, :line-number 0, :column 0, :result [nil], :failed false, :error nil}
+           r)))
 
-  (let [p (match \a)]
-    (is (success? (p "aaa")))
-    (is (= [\a] (result (p "aaa"))))
-    (is (= [\a \a] (remaining (p "aaa"))))
-    (is (input-remaining? (p "aaa"))))
+  (let [p (match \a)
+        inp (make-input "aaa")]
+    (is (success? (p inp)))
+    (is (= [\a] (result (p inp))))
+    (is (= [\a \a] (remaining (p inp))))
+    (is (input-remaining? (p inp))))
 
-  (let [p (match \a)]
-    (is (failure? (p "baa")))
-    (is (= [] (p "baa"))))
+  (let [p (match \a)
+        inp (make-input "baa")]
+    (is (failure? (p inp)))
+    (is (= {:input "baa", :position 0, :line-number 0, :column 0, :result [], :failed true, :error "The value 'b' does not match the expected value of 'a'"}
+           (p inp))))
 
   (let [p (not-one-of [\a \b \c])
-        r (p "dabc")]
+        inp (make-input "dabc")
+        r (p inp)]
     (is (success? r))
     (is (= [\a \b \c] (remaining r)))
     (is (input-remaining? r))
-    (is (failure? (p "adabc")))))
+    (is (failure? (p (make-input "adabc"))))))
 
 (deftest metadata-tests
   (let [p (match \a)]
