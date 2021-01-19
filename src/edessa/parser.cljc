@@ -16,6 +16,11 @@
 (defn apply-parser [p inp]
   (p (make-input inp)))
 
+(defn result [inp] (get inp :result))
+
+(defn succeed {:parser "Succeed"} [v inp]
+  (assoc inp :result (conj (result inp) v)))
+
 (defn advance 
   ([inp] 
     (let [{left :input
@@ -39,13 +44,9 @@
   ([inp v] (advance (succeed v inp))))
 
 (defn remaining [inp] (get inp :input))
-(defn result [inp] (get inp :result))
 
 (defn look [inp]
   (first (get inp :input)))
-
-(defn succeed {:parser "Succeed"} [v inp]
-  (assoc inp :result (conj (result inp) v)))
 
 ;(defn succeed {:parser "Succeed"} [v inp]
 ;  (if (seq? v)
