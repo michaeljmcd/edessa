@@ -169,12 +169,6 @@
   (let [p (plus (match \a))
         r0 (p "aaaab")]
     (is (success? r0))
-    (is (= [\a \a \a \a] (result r0)))
+    (is (= [\a [\a \a \a]] (result r0)))
     (is (= [\b] (remaining r0)))))
 
-(deftest simple-error-handling
-  (let [p (then (match \a) (match \b))
-        r0 (p "ac")]
-    (is (failure? r0))
-    (info "Result " r0)
-    ))
