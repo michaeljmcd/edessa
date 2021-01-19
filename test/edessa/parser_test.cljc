@@ -115,8 +115,8 @@
 
 (deftest one-of-operator
   (let [p (one-of [\a \b \c])
-        r0 (p "cde")
-        r1 (p "zzz")]
+        r0 (apply-parser p "cde")
+        r1 (apply-parser p "zzz")]
     (is (success? r0))
     (is (= [\d \e] (remaining r0)))
     (is (= [\c] (result r0)))
