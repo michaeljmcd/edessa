@@ -14,12 +14,17 @@
    :error nil})
 
 (defn apply-parser [p inp]
-  (p (make-input inp)))
+  (if (map? inp)
+    (p inp)
+    (p (make-input inp))))
 
 (defn result [inp] (get inp :result))
 
 (defn succeed {:parser "Succeed"} [v inp]
   (assoc inp :result (conj (result inp) v)))
+
+(defn succeed! {:parser "Succeed!"} [v inp]
+  (assoc inp :result v))
 
 (defn advance 
   ([inp] 
@@ -41,7 +46,8 @@
       :result res
       :error err
       :failed fail}))
-  ([inp v] (advance (succeed v inp))))
+  ([inp v] (advance (succeed v inp)))
+  )
 
 (defn remaining [inp] (get inp :input))
 
@@ -92,20 +98,24 @@
     {:parser (str "Not one of [" chars "]")}))
 
 (defn zero-or-more [parser]
-  (letfn [(accumulate [inp xs]
+  (letfn [(accumulate [inp]
             (debug "Z*: " (parser-name parser) " Input: " inp)
             (if (input-consumed? inp)
-              (succeed (reverse xs) inp)
+              inp
               (let [r (parser inp)]
                 (debug "Z*: Parser " (parser-name parser) " yielded " r)
                 (if (failure? r)
                   (do
-                    (debug "Z*: Hit end of matches, returning " (succeed (reverse xs) inp))
-                    (succeed (reverse xs) inp))
-                  (recur r (concat (look r) xs))))))]
-
+                    (debug "Z*: Hit end of matches, returning " inp)
+                    inp)
+                  (recur r)))))]
     (with-meta
-      (fn [inp] (accumulate inp []))
+      (fn [inp] 
+        (let [result (accumulate (assoc inp :result []))]
+          (assoc result :result (conj (:result inp) (:result result)))
+          )
+;(accumulate (assoc inp :result []) [])
+      )
       {:parser (->> parser parser-name (str "Zero or more "))})))
 
 (def star zero-or-more)

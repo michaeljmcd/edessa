@@ -61,7 +61,9 @@
     (is (input-remaining? r0))
     (is (= "babc" (remaining r0)))
     (is (success? (apply-parser p "aaaa")))
-    (is (= [] (remaining (apply-parser p "aaaa"))))))
+
+    (info (remaining (apply-parser p "aaaa")))
+    (is (input-consumed? (apply-parser p "aaaa")))))
 
 (deftest choice-combinator
   (let [p (choice (match \a) (match \b))
