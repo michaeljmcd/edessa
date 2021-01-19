@@ -159,14 +159,16 @@
   ([parser1 parser2]
    (with-meta
      (fn [inp]
-       (debug "Entering Then combinator.")
-       (let [[data1 remaining1 :as r1] (parser1 inp)]
+       (debug "Entering Then combinator with input " inp)
+       (let [r1 (apply-parser parser1 inp)]
          (debug "Parser 1 [" (parser-name parser1) "] yielded " r1)
          (if (success? r1)
-           (let [[data2 remaining2 :as r2] (parser2 remaining1)]
+           (let [r2 (apply-parser parser2 (remaining r1))]
              (debug "Parser 2 [" (parser-name parser2) "] yielded " r2)
              (if (success? r2)
-               (succeed (concat data1 data2) remaining2)
+               (succeed! (concat (:result r1)
+                                 (:result r2))
+                        r2)
                (do
                  (debug "Parser 2 [" (parser-name parser2) "] failed, terminating chain.")
                  (fail inp))))
