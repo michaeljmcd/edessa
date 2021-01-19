@@ -48,11 +48,6 @@
 (defn look [inp]
   (first (get inp :input)))
 
-;(defn succeed {:parser "Succeed"} [v inp]
-;  (if (seq? v)
-;    [v inp]
-;    [[v] inp]))
-
 (def epsilon 
   (with-meta (partial succeed nil) 
              {:parser "Epsilon (empty)"}))
@@ -63,10 +58,6 @@
    (-> inp
        (assoc :error message)
        (assoc :failed true))))
-
-;(defn fail {:parser "Fail"} [_] [])
-
-;(defn failure? [r] (= r []))
 
 (defn failure? [r] 
   (get r :failed))
