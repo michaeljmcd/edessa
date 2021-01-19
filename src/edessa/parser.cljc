@@ -4,33 +4,81 @@
 
 ; General parsing functions and combinators.
 
+(defn make-input [inp]
+  {:input inp 
+   :position 0 
+   :line-number 0 
+   :column 0
+   :result []
+   :failed false
+   :error nil})
+
+(defn advance [inp]
+  (let [{left :input
+         pos :position
+         line :line-number
+         col :column
+         res :result
+         err :error
+         fail :failed} inp]
+   {:input (rest left)
+    :position (inc pos)
+    :line-number (if (= \newline (first left))
+                  (inc line)
+                  line)
+    :column (if (= \newline (first left))
+             0
+             (inc col))
+    :result res
+    :error err
+    :failed fail})) 
+
+(defn look [inp]
+  (first (get inp :input)))
+
 (defn succeed {:parser "Succeed"} [v inp]
-  (if (seq? v)
-    [v inp]
-    [[v] inp]))
+  (update-in inp [:result] #(conj % v))
+  )
 
-(def epsilon (with-meta (partial succeed nil) {:parser "Epsilon (empty)"}))
+;(defn succeed {:parser "Succeed"} [v inp]
+;  (if (seq? v)
+;    [v inp]
+;    [[v] inp]))
 
-(defn fail {:parser "Fail"} [_] [])
+(def epsilon 
+  (with-meta (partial succeed nil) 
+             {:parser "Epsilon (empty)"}))
 
-(defn failure? [r] (= r []))
+(defn fail {:parser "Fail"} 
+  ([inp] (fail inp "Parsing failed"))
+  ([inp message] 
+   (-> inp
+       (assoc :error message)
+       (assoc :failed true))))
+
+;(defn fail {:parser "Fail"} [_] [])
+
+;(defn failure? [r] (= r []))
+
+(defn failure? [r] 
+  (get r :failed))
 
 (def success? (comp not failure?))
 
 (defn input-consumed? [r]
  (and (success? r)
-      (empty? (second r))))
+      (empty? (get r :input))))
 
 (def input-remaining? (comp not input-consumed?))
 
-(def remaining second)
-(def result first)
+(defn remaining [inp] (get inp :input))
+(defn result [inp] (get inp :result))
 
 (defn parser-name [parser] (-> parser meta :parser))
 
 (defn match [c]
   (with-meta
-    (fn  [inp]
+    (fn [inp]
       (if (and (not (empty? inp))
                (= (first inp) c))
         (succeed c (rest inp))
