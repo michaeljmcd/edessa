@@ -67,9 +67,9 @@
 
 (deftest choice-combinator
   (let [p (choice (match \a) (match \b))
-        r0 (p "baa")
-        r1 (p "abb")
-        r2 (p "cab")]
+        r0 (apply-parser p "baa")
+        r1 (apply-parser p "abb")
+        r2 (apply-parser p "cab")]
     (is (success? r0))
     (is (= [\b] (result r0)))
     (is (= [\a \a] (remaining r0)))
@@ -81,11 +81,11 @@
     (is (failure? r2)))
 
   (let [p (choice)]
-    (is (failure? (p "aaa"))))
+    (is (failure? (apply-parser p "aaa"))))
 
   (let [p (choice (match \a))
-        r0 (p "ab")
-        r1 (p "ba")]
+        r0 (apply-parser p "ab")
+        r1 (apply-parser p "ba")]
     (is (success? r0))
     (is (= [\b] (remaining r0)))
     (is (= [\a] (result r0)))
@@ -93,8 +93,8 @@
     (is (failure? r1)))
 
   (let [p (choice (match \a) (match \b) (match \c) (match \d))
-        r0 (p "czz")
-        r1 (p "fgh")]
+        r0 (apply-parser p "czz")
+        r1 (apply-parser p "fgh")]
     (is (success? r0))
     (is (= [\c] (result r0)))
     (is (= [\z \z] (remaining r0)))

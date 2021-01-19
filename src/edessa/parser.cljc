@@ -114,7 +114,6 @@
         (let [result (accumulate (assoc inp :result []))]
           (assoc result :result (conj (:result inp) (:result result)))
           )
-;(accumulate (assoc inp :result []) [])
       )
       {:parser (->> parser parser-name (str "Zero or more "))})))
 
