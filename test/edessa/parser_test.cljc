@@ -125,8 +125,8 @@
 
 (deftest using-combinator
   (let [p (using (match \a) (fn [x] {:result x}))
-        r0 (p "abc")
-        r1 (p "dabc")]
+        r0 (apply-parser p "abc")
+        r1 (apply-parser p "dabc")]
     (is (success? r0))
     (is (= [\b \c] (remaining r0)))
     (is (= [{:result [\a]}] (result r0)))

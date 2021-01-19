@@ -136,7 +136,7 @@
 
 (defn optional [parser]
   (with-meta
-    (|| parser epsilon)
+    (choice parser epsilon)
     {:parser (str (parser-name parser) "?")}))
 
 (defn one-of [chars]
@@ -145,10 +145,12 @@
 (defn using [parser transformer]
   (with-meta
     (fn [inp]
-      (let [[data state :as r] (parser inp)]
+      (let [r (apply-parser parser (assoc inp :result []))]
         (if (failure? r)
           r
-          (succeed (transformer data) state))))
+          (succeed! (conj (:result inp) 
+                          (-> r :result transformer)) 
+                    r))))
     {:parser (str (parser-name parser) " [+ Transformer]")}))
 
 (defn then
