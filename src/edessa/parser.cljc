@@ -13,6 +13,9 @@
    :failed false
    :error nil})
 
+(defn apply-parser [p inp]
+  (p (make-input inp)))
+
 (defn advance 
   ([inp] 
     (let [{left :input
@@ -42,8 +45,7 @@
   (first (get inp :input)))
 
 (defn succeed {:parser "Succeed"} [v inp]
-  (assoc inp :result (conj (result inp) v))
-  )
+  (assoc inp :result (conj (result inp) v)))
 
 ;(defn succeed {:parser "Succeed"} [v inp]
 ;  (if (seq? v)
@@ -100,7 +102,7 @@
 (defn zero-or-more [parser]
   (letfn [(accumulate [inp xs]
             (debug "Z*: " (parser-name parser) " Input: " inp)
-            (if (empty? inp)
+            (if (input-consumed? inp)
               (succeed (reverse xs) inp)
               (let [r (parser inp)]
                 (debug "Z*: Parser " (parser-name parser) " yielded " r)
@@ -108,7 +110,7 @@
                   (do
                     (debug "Z*: Hit end of matches, returning " (succeed (reverse xs) inp))
                     (succeed (reverse xs) inp))
-                  (recur (second r) (concat (first r) xs))))))]
+                  (recur r (concat (look r) xs))))))]
 
     (with-meta
       (fn [inp] (accumulate inp []))
