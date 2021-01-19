@@ -103,8 +103,8 @@
 
 (deftest optional-combinator
   (let [p (optional (match \a))
-        r0 (p "abc")
-        r1 (p "dabc")]
+        r0 (apply-parser p "abc")
+        r1 (apply-parser p "dabc")]
     (is (success? r0))
     (is (= [\a] (result r0)))
     (is (= [\b \c] (remaining r0)))
