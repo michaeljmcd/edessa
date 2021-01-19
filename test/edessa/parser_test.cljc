@@ -4,19 +4,22 @@
             [taoensso.timbre :as t :refer [debug error info]]))
 
 (deftest ground-truths
-  (is (= [] (fail "asdf")))
-  (is (failure? (fail 33333)))
+  (is (= {:input "asdf" :position 0 :line-number 0 :column 0 :result [] :failed true :error "Nope"} 
+        (fail (make-input "asdf") "Nope")))
+  (is (failure? (fail (make-input 33333))))
 
-  (is (= [[1] "asdf"] (succeed 1 "asdf")))
-  (is (= [[[1]] "asdf"] (succeed [1] "asdf")))
+  (is (= {:input "asdf", :position 0, :line-number 0, :column 0, :result [1], :failed false, :error nil}
+         (succeed 1 (make-input "asdf"))))
+  (is (= {:input "asdf", :position 0, :line-number 0, :column 0, :result [[1]], :failed false, :error nil}
+         (succeed [1] (make-input "asdf"))))
 
-  (is (success? (succeed 88 nil)))
-  (is (failure? (fail 22)))
+  (is (success? (succeed 88 (make-input nil))))
+  (is (failure? (fail (make-input 22))))
 
-  (is (not (success? (fail 22))))
-  (is (not (failure? (succeed 88 "asdf"))))
+  (is (not (success? (fail (make-input 22)))))
+  (is (not (failure? (succeed 88 (make-input "asdf")))))
 
-  (is (not (input-consumed? (fail 22))))
+  (is (not (input-consumed? (fail (make-input 22)))))
   (is (input-consumed? (succeed 2 nil)))
 
   (is (not (input-remaining? (succeed 2 nil)))))
