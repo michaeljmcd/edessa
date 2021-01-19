@@ -58,12 +58,12 @@
 
 (deftest star-combinator
   (let [p (zero-or-more (match \a))
-        r0 (p "babc")]
+        r0 (p (make-input "babc"))]
     (is (success? r0))
     (is (input-remaining? r0))
     (is (= "babc" (remaining r0)))
-    (is (success? (p "aaaa")))
-    (is (= [] (remaining (p "aaaa"))))))
+    (is (success? (p (make-input "aaaa"))))
+    (is (= [] (remaining (p (make-input "aaaa")))))))
 
 (deftest choice-combinator
   (let [p (choice (match \a) (match \b))
