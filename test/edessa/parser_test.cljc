@@ -1,6 +1,7 @@
 (ns edessa.parser-test
   (:require [clojure.test :refer :all]
-            [edessa.parser :refer :all]))
+            [edessa.parser :refer :all]
+            [taoensso.timbre :as t :refer [debug error info]]))
 
 (deftest ground-truths
   (is (= [] (fail "asdf")))
@@ -162,3 +163,10 @@
     (is (success? r0))
     (is (= [\a \a \a \a] (result r0)))
     (is (= [\b] (remaining r0)))))
+
+(deftest simple-error-handling
+  (let [p (then (match \a) (match \b))
+        r0 (p "ac")]
+    (is (failure? r0))
+    (info "Result " r0)
+    ))
