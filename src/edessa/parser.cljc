@@ -13,31 +13,36 @@
    :failed false
    :error nil})
 
-(defn advance [inp]
-  (let [{left :input
-         pos :position
-         line :line-number
-         col :column
-         res :result
-         err :error
-         fail :failed} inp]
-   {:input (rest left)
-    :position (inc pos)
-    :line-number (if (= \newline (first left))
-                  (inc line)
-                  line)
-    :column (if (= \newline (first left))
-             0
-             (inc col))
-    :result res
-    :error err
-    :failed fail})) 
+(defn advance 
+  ([inp] 
+    (let [{left :input
+           pos :position
+           line :line-number
+           col :column
+           res :result
+           err :error
+           fail :failed} inp]
+     {:input (rest left)
+      :position (inc pos)
+      :line-number (if (= \newline (first left))
+                    (inc line)
+                    line)
+      :column (if (= \newline (first left))
+               0
+               (inc col))
+      :result res
+      :error err
+      :failed fail}))
+  ([inp v] (advance (succeed v inp))))
+
+(defn remaining [inp] (get inp :input))
+(defn result [inp] (get inp :result))
 
 (defn look [inp]
   (first (get inp :input)))
 
 (defn succeed {:parser "Succeed"} [v inp]
-  (update-in inp [:result] #(conj % v))
+  (assoc inp :result (conj (result inp) v))
   )
 
 ;(defn succeed {:parser "Succeed"} [v inp]
@@ -71,18 +76,15 @@
 
 (def input-remaining? (comp not input-consumed?))
 
-(defn remaining [inp] (get inp :input))
-(defn result [inp] (get inp :result))
-
 (defn parser-name [parser] (-> parser meta :parser))
 
 (defn match [c]
   (with-meta
     (fn [inp]
-      (if (and (not (empty? inp))
-               (= (first inp) c))
-        (succeed c (rest inp))
-        (fail inp)))
+      (if (and (input-remaining? inp)
+               (= (look inp) c))
+        (advance inp c)
+        (fail inp (format "The value '%s' does not match the expected value of '%s'", (look inp) c))))
     {:parser (str "Matches " c)}))
 
 (defn not-one-of [chars]
