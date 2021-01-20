@@ -43,7 +43,7 @@
         (using asterisk (fn [_] {:type :column-list :columns :all}))))
     (fn [x] 
       (info "Got " (pr-str x)) 
-      {:command :select :columns []})
+      {:command :select :columns (filter (comp not nil?) x)})
     ))
 
 (def sql select-statement)
@@ -54,4 +54,10 @@
 (deftest select-test
   (let [text (test-resource "simple-select.sql")
         r0 (apply-parser sql text)]
+    (info "Got result: " r0)))
+
+(deftest error-test
+  (let [text (test-resource "invalid-select.0.sql")
+        r0 (apply-parser sql text)]
+    (is (failure? r0))
     (info "Got result: " r0)))

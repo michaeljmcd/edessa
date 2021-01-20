@@ -1,3 +1,3 @@
-SELECT , 
+SELECT
   test, 
-  exa mple
+  example
