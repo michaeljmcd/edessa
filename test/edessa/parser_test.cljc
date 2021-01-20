@@ -172,3 +172,9 @@
     (is (= [\a [\a \a \a]] (result r0)))
     (is (= [\b] (remaining r0)))))
 
+(deftest discard-combinator
+  (let [p (then (match \a) (discard (match \b)))
+        r0 (apply-parser p "ab")]
+    (is (success? r0))
+    (is (= [\a] (result r0)))
+    (is (input-consumed? r0))))

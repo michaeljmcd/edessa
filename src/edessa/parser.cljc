@@ -26,6 +26,15 @@
 (defn succeed! {:parser "Succeed!"} [v inp]
   (assoc inp :result v))
 
+(defn discard [p]
+  (with-meta
+    (fn [inp]
+      (let [input-result (get inp :result)]
+        (assoc (p inp)
+               :result input-result)
+      ))
+    {:parser (str (parser-name p) ", discarding output")}))
+
 (defn advance 
   ([inp] 
     (let [{left :input
