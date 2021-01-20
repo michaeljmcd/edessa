@@ -175,8 +175,8 @@
            (let [r2 (apply-parser parser2 (remaining r1))]
              (debug "Parser 2 [" (parser-name parser2) "] yielded " r2)
              (if (success? r2)
-               (succeed! (concat (:result r1)
-                                 (:result r2))
+               (succeed! (flatten (concat (:result r1)
+                                          (:result r2)))
                         r2)
                (do
                  (debug "Parser 2 [" (parser-name parser2) "] failed, terminating chain.")
