@@ -73,7 +73,10 @@
              {:parser "Epsilon (empty)"}))
 
 (defn fail {:parser "Fail"} 
-  ([inp] (fail inp "Parsing failed"))
+  ([inp] 
+   (if (nil? (:error inp))
+    (fail inp "Parsing failed")
+    (assoc inp :failed true)))
   ([inp message] 
    (-> inp
        (assoc :error message)
@@ -124,9 +127,7 @@
     (with-meta
       (fn [inp] 
         (let [result (accumulate (assoc inp :result []))]
-          (assoc result :result (conj (:result inp) (:result result)))
-          )
-      )
+          (assoc result :result (conj (:result inp) (:result result)))))
       {:parser (->> parser parser-name (str "Zero or more "))})))
 
 (def star zero-or-more)
@@ -182,10 +183,10 @@
                                           (:result r2)))
                         r2)
                (do
-                 (debug "Parser 2 [" (parser-name parser2) "] failed, terminating chain.")
+                 (debug "Parser 2 [" (parser-name parser2) "] failed with " r2 ", terminating chain.")
                  (fail r2))))
            (do
-             (debug "Parser 1 [" (parser-name parser1) "] failed, terminating chain.")
+             (debug "Parser 1 [" (parser-name parser1) "] failed with " r1 ", terminating chain.")
              (fail r1)))))
      {:parser (str (parser-name parser1) " THEN " (parser-name parser2))}))
   ([parser1 parser2 & parsers] (fold then (cons parser1 (cons parser2 parsers)))))
