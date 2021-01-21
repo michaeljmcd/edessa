@@ -13,6 +13,9 @@
    :failed false
    :error nil})
 
+(defn mask-result [inp]
+  (assoc inp :result []))
+
 (defn apply-parser [p inp]
   (if (map? inp)
     (p inp)
@@ -25,6 +28,8 @@
 
 (defn succeed! {:parser "Succeed!"} [v inp]
   (assoc inp :result v))
+
+(defn parser-name [parser] (-> parser meta :parser))
 
 (defn discard [p]
   (with-meta
@@ -84,8 +89,6 @@
       (empty? (get r :input))))
 
 (def input-remaining? (comp not input-consumed?))
-
-(defn parser-name [parser] (-> parser meta :parser))
 
 (defn match [c]
   (with-meta
@@ -172,7 +175,7 @@
        (let [r1 (apply-parser parser1 inp)]
          (debug "Parser 1 [" (parser-name parser1) "] yielded " r1)
          (if (success? r1)
-           (let [r2 (apply-parser parser2 (remaining r1))]
+           (let [r2 (apply-parser parser2 (mask-result r1))]
              (debug "Parser 2 [" (parser-name parser2) "] yielded " r2)
              (if (success? r2)
                (succeed! (flatten (concat (:result r1)
@@ -180,10 +183,10 @@
                         r2)
                (do
                  (debug "Parser 2 [" (parser-name parser2) "] failed, terminating chain.")
-                 (fail inp))))
+                 (fail r2))))
            (do
              (debug "Parser 1 [" (parser-name parser1) "] failed, terminating chain.")
-             (fail inp)))))
+             (fail r1)))))
      {:parser (str (parser-name parser1) " THEN " (parser-name parser2))}))
   ([parser1 parser2 & parsers] (fold then (cons parser1 (cons parser2 parsers)))))
 

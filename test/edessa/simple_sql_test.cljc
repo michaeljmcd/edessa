@@ -27,7 +27,7 @@
                   (discard (optional ws))
                   identifier)))
     (fn [x] 
-      {:type :column-list :columns (filter (comp not nil?) x)}
+      (filter (comp not nil?) x)
     )))
 
 (def select-list select-sublist)
