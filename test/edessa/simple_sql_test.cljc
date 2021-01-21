@@ -14,9 +14,9 @@
 (def comma (match \,))
 
 (def identifier 
-  (using
+  (parser 
     (plus (not-one-of [\" \tab \newline \, \space]))
-    (fn [x] (info "Got " x) {:type :column :identifier (str/join x)})))
+    :using (fn [x] (info "Got " x) {:type :column :identifier (str/join x)})))
 
 (def select-sublist
   (using
