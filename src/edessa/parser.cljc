@@ -1,13 +1,13 @@
 (ns edessa.parser
- (:require [clojure.core.reducers :refer [fold]]
-           [taoensso.timbre :as t :refer [debug error]]))
+  (:require [clojure.core.reducers :refer [fold]]
+            [taoensso.timbre :as t :refer [debug error]]))
 
 ; General parsing functions and combinators.
 
 (defn make-input [inp]
-  {:input inp 
-   :position 0 
-   :line-number 0 
+  {:input inp
+   :position 0
+   :line-number 0
    :column 0
    :result []
    :failed false
@@ -36,27 +36,26 @@
     (fn [inp]
       (let [input-result (get inp :result)]
         (assoc (p inp)
-               :result input-result)
-      ))
+               :result input-result)))
     {:parser (str (parser-name p) ", discarding output")}))
 
-(defn advance 
-  ([inp] 
-    (let [{left :input
-           pos :position
-           line :line-number
-           col :column
-           res :result
-           err :error
-           fail :failed} inp]
+(defn advance
+  ([inp]
+   (let [{left :input
+          pos :position
+          line :line-number
+          col :column
+          res :result
+          err :error
+          fail :failed} inp]
      {:input (rest left)
       :position (inc pos)
       :line-number (if (= \newline (first left))
-                    (inc line)
-                    line)
+                     (inc line)
+                     line)
       :column (if (= \newline (first left))
-               0
-               (inc col))
+                0
+                (inc col))
       :result res
       :error err
       :failed fail}))
@@ -67,28 +66,28 @@
 (defn look [inp]
   (first (get inp :input)))
 
-(def epsilon 
-  (with-meta (partial succeed nil) 
-             {:parser "Epsilon (empty)"}))
+(def epsilon
+  (with-meta (partial succeed nil)
+    {:parser "Epsilon (empty)"}))
 
-(defn fail {:parser "Fail"} 
-  ([inp] 
+(defn fail {:parser "Fail"}
+  ([inp]
    (if (nil? (:error inp))
-    (fail inp "Parsing failed")
-    (assoc inp :failed true)))
-  ([inp message] 
+     (fail inp "Parsing failed")
+     (assoc inp :failed true)))
+  ([inp message]
    (-> inp
        (assoc :error message)
        (assoc :failed true))))
 
-(defn failure? [r] 
+(defn failure? [r]
   (get r :failed))
 
 (def success? (comp not failure?))
 
 (defn input-consumed? [r]
- (and (success? r)
-      (empty? (get r :input))))
+  (and (success? r)
+       (empty? (get r :input))))
 
 (def input-remaining? (comp not input-consumed?))
 
@@ -124,7 +123,7 @@
                     inp)
                   (recur r)))))]
     (with-meta
-      (fn [inp] 
+      (fn [inp]
         (let [result (accumulate (assoc inp :result []))]
           (assoc result :result (conj (:result inp) (:result result)))))
       {:parser (->> parser parser-name (str "Zero or more "))})))
@@ -157,15 +156,15 @@
 (defn using [parser transformer]
   (if (nil? transformer)
     parser
-  (with-meta
-    (fn [inp]
-      (let [r (apply-parser parser (assoc inp :result []))]
-        (if (failure? r)
-          r
-          (succeed! (conj (:result inp) 
-                          (-> r :result transformer)) 
-                    r))))
-    {:parser (str (parser-name parser) " [+ Transformer]")})))
+    (with-meta
+      (fn [inp]
+        (let [r (apply-parser parser (assoc inp :result []))]
+          (if (failure? r)
+            r
+            (succeed! (conj (:result inp)
+                            (-> r :result transformer))
+                      r))))
+      {:parser (str (parser-name parser) " [+ Transformer]")})))
 
 (defn then
   ([] (with-meta epsilon {:parser "Epsilon"}))
@@ -182,7 +181,7 @@
              (if (success? r2)
                (succeed! (flatten (concat (:result r1)
                                           (:result r2)))
-                        r2)
+                         r2)
                (do
                  (debug "Parser 2 [" (parser-name parser2) "] failed with " r2 ", terminating chain.")
                  (fail r2))))
@@ -207,17 +206,15 @@
 (defn alarm [p err-fn]
   (if (nil? err-fn)
     p
-  (fn [x]
-    (let [r (apply-parser p x)]
-      (if (failure? r)
-        (err-fn r)
-        r)))))
+    (fn [x]
+      (let [r (apply-parser p x)]
+        (if (failure? r)
+          (err-fn r)
+          r)))))
 
 (defn parser [p & {:keys [error using name]}]
   (let [metadata (if (nil? name) (meta p) {:parser name})]
-  (-> p 
-      (alarm error)
-      (edessa.parser/using using)
-      (with-meta metadata)
-      ) 
-      ))
+    (-> p
+        (alarm error)
+        (edessa.parser/using using)
+        (with-meta metadata))))

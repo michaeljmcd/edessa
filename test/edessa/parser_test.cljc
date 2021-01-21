@@ -4,8 +4,8 @@
             [taoensso.timbre :as t :refer [debug error info]]))
 
 (deftest ground-truths
-  (is (= {:input "asdf" :position 0 :line-number 0 :column 0 :result [] :failed true :error "Nope"} 
-        (fail (make-input "asdf") "Nope")))
+  (is (= {:input "asdf" :position 0 :line-number 0 :column 0 :result [] :failed true :error "Nope"}
+         (fail (make-input "asdf") "Nope")))
   (is (failure? (fail (make-input 33333))))
 
   (is (= {:input "asdf", :position 0, :line-number 0, :column 0, :result [1], :failed false, :error nil}
