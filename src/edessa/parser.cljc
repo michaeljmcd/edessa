@@ -60,8 +60,7 @@
       :result res
       :error err
       :failed fail}))
-  ([inp v] (advance (succeed v inp)))
-  )
+  ([inp v] (advance (succeed v inp))))
 
 (defn remaining [inp] (get inp :input))
 
@@ -156,6 +155,8 @@
   (apply choice (map #(match %) chars)))
 
 (defn using [parser transformer]
+  (if (nil? transformer)
+    parser
   (with-meta
     (fn [inp]
       (let [r (apply-parser parser (assoc inp :result []))]
@@ -164,7 +165,7 @@
           (succeed! (conj (:result inp) 
                           (-> r :result transformer)) 
                     r))))
-    {:parser (str (parser-name parser) " [+ Transformer]")}))
+    {:parser (str (parser-name parser) " [+ Transformer]")})))
 
 (defn then
   ([] (with-meta epsilon {:parser "Epsilon"}))
@@ -202,3 +203,21 @@
   (then parser (star parser)))
 
 (def plus one-or-more)
+
+(defn alarm [p err-fn]
+  (if (nil? err-fn)
+    p
+  (fn [x]
+    (let [r (apply-parser p x)]
+      (if (failure? r)
+        (err-fn r)
+        r)))))
+
+(defn parser [p & {:keys [error using name]}]
+  (let [metadata (if (nil? name) (meta p) {:parser name})]
+  (-> p 
+      (alarm error)
+      (edessa.parser/using using)
+      (with-meta metadata)
+      ) 
+      ))
