@@ -52,7 +52,8 @@
 (deftest select-test
   (let [text (test-resource "simple-select.sql")
         r0 (apply-parser sql text)]
-    (info "Got result: " r0)))
+    (info "Got result: " r0)
+    (is (success? r0))))
 
 (deftest error-test
   (let [text (test-resource "invalid-select.0.sql")

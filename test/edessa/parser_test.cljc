@@ -169,7 +169,7 @@
   (let [p (plus (match \a))
         r0 (p "aaaab")]
     (is (success? r0))
-    (is (= [\a [\a \a \a]] (result r0)))
+    (is (= [\a \a \a \a] (result r0)))
     (is (= [\b] (remaining r0)))))
 
 (deftest discard-combinator
