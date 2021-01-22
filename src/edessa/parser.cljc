@@ -143,8 +143,6 @@
      {:parser (str (parser-name parser1) " OR " (parser-name parser2))}))
   ([parser1 parser2 & parsers] (fold choice (concat [parser1 parser2] parsers))))
 
-(def || choice)
-
 (defn optional [parser]
   (with-meta
     (choice parser epsilon)
@@ -170,28 +168,29 @@
   ([] (with-meta epsilon {:parser "Epsilon"}))
   ([parser1] (with-meta parser1 (meta parser1)))
   ([parser1 parser2]
+   (let [p1-name (parser-name parser1)
+         p2-name (parser-name parser2)
+         parser-name (str (parser-name parser1) " THEN " (parser-name parser2))]
    (with-meta
      (fn [inp]
-       (debug "Entering Then combinator with input " inp)
+       (debug "Entering Then combinator (" parser-name ") with input " inp)
        (let [r1 (apply-parser parser1 inp)]
-         (debug "Parser 1 [" (parser-name parser1) "] yielded " r1)
+         (debug "Parser 1 [" p1-name "] yielded " r1)
          (if (success? r1)
            (let [r2 (apply-parser parser2 (mask-result r1))]
-             (debug "Parser 2 [" (parser-name parser2) "] yielded " r2)
+             (debug "Parser 2 [" p2-name "] yielded " r2)
              (if (success? r2)
                (succeed! (flatten (concat (:result r1)
                                           (:result r2)))
                          r2)
                (do
-                 (debug "Parser 2 [" (parser-name parser2) "] failed with " r2 ", terminating chain.")
+                 (debug "Parser 2 [" p2-name "] failed with " r2 ", terminating chain.")
                  (fail r2))))
            (do
-             (debug "Parser 1 [" (parser-name parser1) "] failed with " r1 ", terminating chain.")
+             (debug "Parser 1 [" p1-name "] failed with " r1 ", terminating chain.")
              (fail r1)))))
-     {:parser (str (parser-name parser1) " THEN " (parser-name parser2))}))
+     {:parser parser-name})))
   ([parser1 parser2 & parsers] (fold then (cons parser1 (cons parser2 parsers)))))
-
-(def |> then)
 
 (defn literal [lit]
   (with-meta
