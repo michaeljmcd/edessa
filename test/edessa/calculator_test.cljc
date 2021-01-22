@@ -17,16 +17,16 @@
 (def dot (parser (match \.)))
 
 (def plus1 (parser (match \+)
-                   :using (fn [_] {:token :plus :value "+"})))
+                   :using (fn [_] {:token :operator :value "+"})))
 
 (def minus (parser (match \-)
-                   :using (fn [_] {:token :minus :value "-"})))
+                   :using (fn [_] {:token :operator :value "-"})))
 
 (def times (parser (match \*)
-                   :using (fn [_] {:token :times :value "*"})))
+                   :using (fn [_] {:token :operator :value "*"})))
 
 (def divide (parser (match \/)
-                    :using (fn [_] {:token :divide :value "/"})))
+                    :using (fn [_] {:token :operator :value "/"})))
 
 (def operator (parser (choice plus1 minus times divide)))
 
@@ -39,11 +39,12 @@
                                     :value (read-string (apply str x))})
                  ))
 
-(def left-paren (parser (match \()
+(def left-paren (parser (match \( )
                         :using (fn [_] {:token :open-parentheses :value "("})))
 
 (def right-paren (parser (match \))
                         :using (fn [_] {:token :close-parentheses :value ")"})))
+
 (def token (choice 
              left-paren
              right-paren
@@ -52,3 +53,5 @@
              (discard ws)))
 
 (def tokens (plus token))
+
+(def number-token (parser (match-with #(= (:token %) :number))))

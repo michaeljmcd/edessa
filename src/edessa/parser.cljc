@@ -31,13 +31,52 @@
 
 (defn parser-name [parser] (-> parser meta :parser))
 
+(defn with-name [p name] 
+  (if (nil? name)
+    p
+    (let [orig-meta (meta p)]
+      (with-meta p (assoc orig-meta :parser name)))))
+
+(defn failure? [r]
+  (get r :failed))
+
+(def success? (comp not failure?))
+
+(defn alarm [p err-fn]
+  (if (nil? err-fn)
+    p
+    (fn [x]
+      (let [r (apply-parser p x)]
+        (if (failure? r)
+          (err-fn r)
+          r)))))
+
+(defn using [parser transformer]
+  (if (nil? transformer)
+    parser
+    (with-name
+      (fn [inp]
+        (let [r (apply-parser parser (assoc inp :result []))]
+          (if (failure? r)
+            r
+            (succeed! (conj (:result inp)
+                            (-> r :result transformer))
+                      r))))
+      (str (parser-name parser) " [+ Transformer]"))))
+
+(defn parser [p & {:keys [error using name]}]
+    (-> p
+        (alarm error)
+        (edessa.parser/using using)
+        (with-name name)))
+
 (defn discard [p]
-  (with-meta
+  (parser
     (fn [inp]
       (let [input-result (get inp :result)]
         (assoc (p inp)
                :result input-result)))
-    {:parser (str (parser-name p) ", discarding output")}))
+    :name (str (parser-name p) ", discarding output")))
 
 (defn advance
   ([inp]
@@ -67,8 +106,8 @@
   (first (get inp :input)))
 
 (def epsilon
-  (with-meta (partial succeed nil)
-    {:parser "Epsilon (empty)"}))
+  (parser (partial succeed nil)
+          :name "Epsilon (empty)"))
 
 (defn fail {:parser "Fail"}
   ([inp]
@@ -80,98 +119,94 @@
        (assoc :error message)
        (assoc :failed true))))
 
-(defn failure? [r]
-  (get r :failed))
-
-(def success? (comp not failure?))
-
 (defn input-consumed? [r]
   (and (success? r)
        (empty? (get r :input))))
 
 (def input-remaining? (comp not input-consumed?))
 
-(defn match [c]
-  (with-meta
+(defn match 
+  ([c]
+  (parser
     (fn [inp]
       (if (and (input-remaining? inp)
                (= (look inp) c))
         (advance inp c)
-        (fail inp (format "The value '%s' does not match the expected value of '%s'", (look inp) c))))
-    {:parser (str "Matches " c)}))
+        (fail inp (format "The value '%s' does not match the expected value of '%s'.", (look inp) c))))
+     :name (str "Matches " c))))
+
+(defn match-with [pred]
+  (parser
+    (fn [inp]
+      (let [current (look inp)]
+        (if (pred current)
+          (advance inp current)
+          (fail inp (format "The value %s does not satisfy the required conditions." current)))))
+    :name (str "Match-with " pred)))
 
 (defn not-one-of [chars]
-  (with-meta
+  (parser
     (fn [inp]
       (let [x (look inp)]
         (if (or (input-consumed? inp)
                 (some (partial = x) chars))
           (fail inp (format "Value '%s' is not one of %s" x chars))
           (advance inp x))))
-    {:parser (str "Not one of [" chars "]")}))
+    :name (str "Not one of [" chars "]")))
 
-(defn zero-or-more [parser]
+(defn zero-or-more [p]
   (letfn [(accumulate [inp]
             (debug "Z*: " (parser-name parser) " Input: " inp)
             (if (input-consumed? inp)
               inp
-              (let [r (parser inp)]
-                (debug "Z*: Parser " (parser-name parser) " yielded " r)
+              (let [r (p inp)]
+                (debug "Z*: Parser " (parser-name p) " yielded " r)
                 (if (failure? r)
                   (do
                     (debug "Z*: Hit end of matches, returning " inp)
                     inp)
                   (recur r)))))]
-    (with-meta
+    (parser
       (fn [inp]
         (let [result (accumulate (assoc inp :result []))]
-          (assoc result :result (conj (:result inp) (:result result)))))
-      {:parser (->> parser parser-name (str "Zero or more "))})))
+          (assoc result 
+                 :result 
+                 (conj (:result inp) (:result result)))))
+      :name (str "Zero or more " (parser-name p)))))
 
 (def star zero-or-more)
 
 (defn choice
-  ([] (with-meta fail {:parser "Fail"}))
-  ([parser1] (with-meta parser1 {:parser (parser-name parser1)}))
+  ([] 
+   (parser fail :name "Fail"))
+  ([parser1] 
+   (parser parser1 :name (parser-name parser1)))
   ([parser1 parser2]
-   (with-meta
+   (parser
      (fn [inp]
        (let [r1 (parser1 inp)]
          (if (failure? r1)
            (parser2 inp)
            r1)))
-     {:parser (str (parser-name parser1) " OR " (parser-name parser2))}))
-  ([parser1 parser2 & parsers] (fold choice (concat [parser1 parser2] parsers))))
+     :name (str (parser-name parser1) " OR " (parser-name parser2))))
+  ([parser1 parser2 & parsers]
+   (fold choice (concat [parser1 parser2] parsers))))
 
-(defn optional [parser]
-  (with-meta
-    (choice parser epsilon)
-    {:parser (str (parser-name parser) "?")}))
+(defn optional [p]
+  (parser (choice p epsilon)
+          :name (str (parser-name p) "?")))
 
 (defn one-of [chars]
   (apply choice (map #(match %) chars)))
 
-(defn using [parser transformer]
-  (if (nil? transformer)
-    parser
-    (with-meta
-      (fn [inp]
-        (let [r (apply-parser parser (assoc inp :result []))]
-          (if (failure? r)
-            r
-            (succeed! (conj (:result inp)
-                            (-> r :result transformer))
-                      r))))
-      {:parser (str (parser-name parser) " [+ Transformer]")})))
-
 (defn then
-  ([] (with-meta epsilon {:parser "Epsilon"}))
-  ([parser1] (with-meta parser1 (meta parser1)))
+  ([] (parser epsilon :name "Epsilon"))
+  ([parser1] (parser parser1 :name (parser-name parser1)))
   ([parser1 parser2]
    (let [p1-name (parser-name parser1)
          p2-name (parser-name parser2)
          parser-name (str (parser-name parser1) " THEN " (parser-name parser2))]
-   (with-meta
+   (parser
      (fn [inp]
        (debug "Entering Then combinator (" parser-name ") with input " inp)
        (let [r1 (apply-parser parser1 inp)]
@@ -189,31 +224,14 @@
            (do
              (debug "Parser 1 [" p1-name "] failed with " r1 ", terminating chain.")
              (fail r1)))))
-     {:parser parser-name})))
+     :name parser-name)))
   ([parser1 parser2 & parsers] (fold then (cons parser1 (cons parser2 parsers)))))
 
 (defn literal [lit]
-  (with-meta
-    (apply then (map match lit))
-    {:parser "Literal [" lit "]"}))
+  (parser (apply then (map match lit))
+          :name (str "Literal [" lit "]")))
 
 (defn one-or-more [parser]
   (then parser (star parser)))
 
 (def plus one-or-more)
-
-(defn alarm [p err-fn]
-  (if (nil? err-fn)
-    p
-    (fn [x]
-      (let [r (apply-parser p x)]
-        (if (failure? r)
-          (err-fn r)
-          r)))))
-
-(defn parser [p & {:keys [error using name]}]
-  (let [metadata (if (nil? name) (meta p) {:parser name})]
-    (-> p
-        (alarm error)
-        (edessa.parser/using using)
-        (with-meta metadata))))
