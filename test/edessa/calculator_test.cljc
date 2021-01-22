@@ -11,7 +11,7 @@
 (def ws (parser (star (one-of [\space \tab \newline]))
                 :name "Whitespace"))
 
-(def digits (parser (star (one-of [\0 \1 \2 \3 \4 \5 \6 \7 \8 \9]))
+(def digits (parser (plus (one-of [\0 \1 \2 \3 \4 \5 \6 \7 \8 \9]))
                     :name "Digits"))
 
 (def dot (parser (match \.)))
@@ -34,18 +34,21 @@
                       (optional (match \-)) 
                       digits 
                       (optional (then dot digits)))
-                    :using (fn [x] {:token :number 
-                                    :value (read-string (apply str x))})))
+                    :using (fn [x] (info "Number parsing " (apply str (filter (comp not nil?) x)))
+                             {:token :number 
+                                    :value (read-string (apply str x))})
+                 ))
 
-(def expr (parser
-            (then 
-                number 
-                (discard ws)
-                operator 
-                (discard ws)
-                number)))
+(def left-paren (parser (match \()
+                        :using (fn [_] {:token :open-parentheses :value "("})))
 
-(def calc (parser 
-            (choice 
-              expr
-              number)))
+(def right-paren (parser (match \))
+                        :using (fn [_] {:token :close-parentheses :value ")"})))
+(def token (choice 
+             left-paren
+             right-paren
+             number
+             operator
+             (discard ws)))
+
+(def tokens (plus token))
