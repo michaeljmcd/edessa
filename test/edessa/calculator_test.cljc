@@ -36,8 +36,7 @@
                       (optional (then dot digits)))
                     :using (fn [x] (info "Number parsing " (apply str (filter (comp not nil?) x)))
                              {:token :number 
-                                    :value (read-string (apply str x))})
-                 ))
+                                    :value (read-string (apply str x))})))
 
 (def left-paren (parser (match \( )
                         :using (fn [_] {:token :open-parentheses :value "("})))
@@ -54,4 +53,23 @@
 
 (def tokens (plus token))
 
-(def number-token (parser (match-with #(= (:token %) :number))))
+(def number-token (parser (match-with #(= (:token %) :number))
+                          :using (fn [x] (info "Number token " (pr-str x)) (:value (first x)))))
+
+(def operator-token (parser (match-with #(= (:token %) :operator))))
+
+(def left-paren-token (parser (match-with #(= (:token %) :open-parentheses))))
+
+(def right-paren-token (parser (match-with #(= (:token %) :close-parentheses))))
+
+(def arithmetic-expr (parser (then number-token operator-token number-token)
+                             :using (fn [x] 
+                                      (info "Got " (pr-str x))
+                                      (let [components (filter (comp not nil?) x)]
+                                        {:operator (second components) :operands [(first components) (nth components 2)]}))))
+
+(def simple-expr (parser (choice arithmetic-expr number-token)))
+
+(def paren-expr (parser (then left-paren-token simple-expr right-paren-token)))
+
+(def expr (parser (choice paren-expr simple-expr)))
