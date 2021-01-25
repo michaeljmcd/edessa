@@ -53,6 +53,16 @@
 
 (def tokens (plus token))
 
+; With the tokenization done, we turn to recognizing a stream of token objects.
+; We want a grammar that looks like this:
+;
+; Expr ::= Term ('+' Term | '-' Term)*
+; Term ::= Factor ('*' Factor | '/' Factor)*
+
+; Factor ::= ['-'] (Number | '(' Expr ')')
+
+; Number ::= Digit+
+
 (def number-token (parser (match-with #(= (:token %) :number))
                           :using (fn [x] (info "Number token " (pr-str x)) (:value (first x)))))
 
@@ -62,13 +72,16 @@
 
 (def right-paren-token (parser (match-with #(= (:token %) :close-parentheses))))
 
-(def arithmetic-expr (parser (then number-token operator-token number-token)
+
+(declare expr)
+
+(def simple-expr (parser (choice (then edessa.calculator-test/expr operator-token edessa.calculator-test/expr) number-token)
                              :using (fn [x] 
                                       (info "Got " (pr-str x))
                                       (let [components (filter (comp not nil?) x)]
-                                        {:operator (second components) :operands [(first components) (nth components 2)]}))))
-
-(def simple-expr (parser (choice arithmetic-expr number-token)))
+                                        (if (= 1 (count components))
+                                          (first components)
+                                          {:operator (second components) :operands [(first components) (nth components 2)]})))))
 
 (def paren-expr (parser (then left-paren-token simple-expr right-paren-token)))
 
