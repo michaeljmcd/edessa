@@ -5,6 +5,8 @@
             [taoensso.timbre :as t :refer [debug error info with-level]]
             [clojure.java.io :as io]))
 
+(def not-nil? (comp not nil?))
+
 ; The general idea is to do a two pass compiler on a simple calculator for no
 ; other reason than to provide a different take on parsing for test purposes.
 
@@ -34,7 +36,7 @@
                       (optional (match \-)) 
                       digits 
                       (optional (then dot digits)))
-                    :using (fn [x] (info "Number parsing " (apply str (filter (comp not nil?) x)))
+                    :using (fn [x] (info "Number parsing " (apply str (filter not-nil? x)))
                              {:token :number 
                                     :value (read-string (apply str x))})))
 
@@ -63,11 +65,13 @@
 
 ; Number ::= Digit+
 
-(def left-paren-token (parser (match-with #(= (:token %) :open-parentheses))))
+(def left-paren-token (parser (match-with (fn [x] (= (:token x) :open-parentheses)))))
 
-(def right-paren-token (parser (match-with #(= (:token %) :close-parentheses))))
+(def right-paren-token (parser (match-with (fn [x] (= (:token x) :close-parentheses)))))
 
-(def number-token (parser (match-with #(= (:token %) :number))
+(def is-numbert? (fn [x] (= (:token x) :number)))
+
+(def number-token (parser (match-with is-numbert?)
                           :using (fn [x] (info "Number token " (pr-str x)) (:value (first x)))))
 
 (def plus-token (parser (match {:token :operator :value "+"})))
@@ -77,6 +81,8 @@
 (def star-token (parser (match {:token :operator :value "*"})))
 
 (def slash-token (parser (match {:token :operator :value "/"})))
+
+(def operator-token (parser (match-with (fn [x] (= (:token x) :operator)))))
 
 (declare expr)
 
@@ -95,11 +101,18 @@
                     (then star-token factor)
                     (then slash-token factor)))))
 
-(def expr (then term 
+(def expr (parser
+            (then term 
                 (star
                   (choice
                     (then plus-token term)
-                    (then minus-token term)))))
+                    (then minus-token term))))
+            :using 
+              (fn [x] 
+                (let [components (filter not-nil? x)]
+                  (info "expr components " (pr-str components))
+                  components
+                ))))
 
 (defn parse-calc-text [input]
   (-> input
