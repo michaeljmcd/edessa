@@ -2,7 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
             [edessa.parser :refer :all]
-            [taoensso.timbre :as t :refer [debug error info]]
+            [taoensso.timbre :as t :refer [debug error info with-level]]
             [clojure.java.io :as io]))
 
 ; The general idea is to do a two pass compiler on a simple calculator for no
@@ -63,26 +63,68 @@
 
 ; Number ::= Digit+
 
-(def number-token (parser (match-with #(= (:token %) :number))
-                          :using (fn [x] (info "Number token " (pr-str x)) (:value (first x)))))
-
-(def operator-token (parser (match-with #(= (:token %) :operator))))
-
 (def left-paren-token (parser (match-with #(= (:token %) :open-parentheses))))
 
 (def right-paren-token (parser (match-with #(= (:token %) :close-parentheses))))
 
+(def number-token (parser (match-with #(= (:token %) :number))
+                          :using (fn [x] (info "Number token " (pr-str x)) (:value (first x)))))
+
+(def plus-token (parser (match {:token :operator :value "+"})))
+
+(def minus-token (parser (match {:token :operator :value "-"})))
+
+(def star-token (parser (match {:token :operator :value "*"})))
+
+(def slash-token (parser (match {:token :operator :value "/"})))
 
 (declare expr)
 
-(def simple-expr (parser (choice (then edessa.calculator-test/expr operator-token edessa.calculator-test/expr) number-token)
-                             :using (fn [x] 
-                                      (info "Got " (pr-str x))
-                                      (let [components (filter (comp not nil?) x)]
-                                        (if (= 1 (count components))
-                                          (first components)
-                                          {:operator (second components) :operands [(first components) (nth components 2)]})))))
+(def factor (then
+              (optional minus-token)
+              (choice
+                number-token
+                (then 
+                  left-paren-token
+                  #'expr
+                  right-paren-token))))
 
-(def paren-expr (parser (then left-paren-token simple-expr right-paren-token)))
+(def term (then factor
+                (star
+                  (choice 
+                    (then star-token factor)
+                    (then slash-token factor)))))
 
-(def expr (parser (choice paren-expr simple-expr)))
+(def expr (then term 
+                (star
+                  (choice
+                    (then plus-token term)
+                    (then minus-token term)))))
+
+(defn parse-calc-text [input]
+  (-> input
+        make-input
+        tokens
+        result
+        make-input
+        expr))
+
+(deftest simple-valid-expressions
+  (with-level :info
+  (let [input "1 + 1"
+    result (parse-calc-text input)]
+    (is (success? result))
+    (info "1 + 1 result: " result))
+  
+  (let [input "371 * 44"
+        result (parse-calc-text input)]
+    (is (success? result))
+    (info "371 * 44 result: " result))
+  ))
+
+(deftest parenthesized-expressions
+  (with-level :info
+  (let [input "(44.1 * 33)"
+        result (parse-calc-text input)]
+    (is (success? result))
+    (info input " result: " result))))
