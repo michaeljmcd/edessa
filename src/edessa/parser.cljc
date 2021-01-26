@@ -31,7 +31,7 @@
 
 (defn parser-name [parser] (-> parser meta :parser))
 
-(defn with-name [p name] 
+(defn with-name [p name]
   (if (nil? name)
     p
     (let [orig-meta (meta p)]
@@ -65,18 +65,18 @@
       (str (parser-name parser) " [+ Transformer]"))))
 
 (defn parser [p & {:keys [error using name]}]
-    (-> p
-        (alarm error)
-        (edessa.parser/using using)
-        (with-name name)))
+  (-> p
+      (alarm error)
+      (edessa.parser/using using)
+      (with-name name)))
 
 (defn discard [p]
   (parser
-    (fn [inp]
-      (let [input-result (get inp :result)]
-        (assoc (p inp)
-               :result input-result)))
-    :name (str (parser-name p) ", discarding output")))
+   (fn [inp]
+     (let [input-result (get inp :result)]
+       (assoc (p inp)
+              :result input-result)))
+   :name (str (parser-name p) ", discarding output")))
 
 (defn advance
   ([inp]
@@ -125,34 +125,34 @@
 
 (def input-remaining? (comp not input-consumed?))
 
-(defn match 
+(defn match
   ([c]
-  (parser
+   (parser
     (fn [inp]
       (if (and (input-remaining? inp)
                (= (look inp) c))
         (advance inp c)
         (fail inp (format "The value '%s' does not match the expected value of '%s'.", (look inp) c))))
-     :name (str "Matches " c))))
+    :name (str "Matches " c))))
 
 (defn match-with [pred]
   (parser
-    (fn [inp]
-      (let [current (look inp)]
-        (if (pred current)
-          (advance inp current)
-          (fail inp (format "The value %s does not satisfy the required conditions." current)))))
-    :name (str "Match-with " pred)))
+   (fn [inp]
+     (let [current (look inp)]
+       (if (pred current)
+         (advance inp current)
+         (fail inp (format "The value %s does not satisfy the required conditions." current)))))
+   :name (str "Match-with " pred)))
 
 (defn not-one-of [chars]
   (parser
-    (fn [inp]
-      (let [x (look inp)]
-        (if (or (input-consumed? inp)
-                (some (partial = x) chars))
-          (fail inp (format "Value '%s' is not one of %s" x chars))
-          (advance inp x))))
-    :name (str "Not one of [" chars "]")))
+   (fn [inp]
+     (let [x (look inp)]
+       (if (or (input-consumed? inp)
+               (some (partial = x) chars))
+         (fail inp (format "Value '%s' is not one of %s" x chars))
+         (advance inp x))))
+   :name (str "Not one of [" chars "]")))
 
 (defn zero-or-more [p]
   (letfn [(accumulate [inp]
@@ -167,28 +167,28 @@
                     inp)
                   (recur r)))))]
     (parser
-      (fn [inp]
-        (let [result (accumulate (assoc inp :result []))]
-          (assoc result 
-                 :result 
-                 (conj (:result inp) (:result result)))))
-      :name (str "Zero or more " (parser-name p)))))
+     (fn [inp]
+       (let [result (accumulate (assoc inp :result []))]
+         (assoc result
+                :result
+                (conj (:result inp) (:result result)))))
+     :name (str "Zero or more " (parser-name p)))))
 
 (def star zero-or-more)
 
 (defn choice
-  ([] 
+  ([]
    (parser fail :name "Fail"))
-  ([parser1] 
+  ([parser1]
    (parser parser1 :name (parser-name parser1)))
   ([parser1 parser2]
    (parser
-     (fn [inp]
-       (let [r1 (parser1 inp)]
-         (if (failure? r1)
-           (parser2 inp)
-           r1)))
-     :name (str (parser-name parser1) " OR " (parser-name parser2))))
+    (fn [inp]
+      (let [r1 (parser1 inp)]
+        (if (failure? r1)
+          (parser2 inp)
+          r1)))
+    :name (str (parser-name parser1) " OR " (parser-name parser2))))
   ([parser1 parser2 & parsers]
    (fold choice (concat [parser1 parser2] parsers))))
 
@@ -206,25 +206,25 @@
    (let [p1-name (parser-name parser1)
          p2-name (parser-name parser2)
          parser-name (str (parser-name parser1) " THEN " (parser-name parser2))]
-   (parser
-     (fn [inp]
-       (debug "Entering Then combinator (" parser-name ") with input " inp)
-       (let [r1 (apply-parser parser1 inp)]
-         (debug "Parser 1 [" p1-name "] yielded " r1)
-         (if (success? r1)
-           (let [r2 (apply-parser parser2 (mask-result r1))]
-             (debug "Parser 2 [" p2-name "] yielded " r2)
-             (if (success? r2)
-               (succeed! (flatten (concat (:result r1)
-                                          (:result r2)))
-                         r2)
-               (do
-                 (debug "Parser 2 [" p2-name "] failed with " r2 ", terminating chain.")
-                 (fail r2))))
-           (do
-             (debug "Parser 1 [" p1-name "] failed with " r1 ", terminating chain.")
-             (fail r1)))))
-     :name parser-name)))
+     (parser
+      (fn [inp]
+        (debug "Entering Then combinator (" parser-name ") with input " inp)
+        (let [r1 (apply-parser parser1 inp)]
+          (debug "Parser 1 [" p1-name "] yielded " r1)
+          (if (success? r1)
+            (let [r2 (apply-parser parser2 (mask-result r1))]
+              (debug "Parser 2 [" p2-name "] yielded " r2)
+              (if (success? r2)
+                (succeed! (flatten (concat (:result r1)
+                                           (:result r2)))
+                          r2)
+                (do
+                  (debug "Parser 2 [" p2-name "] failed with " r2 ", terminating chain.")
+                  (fail r2))))
+            (do
+              (debug "Parser 1 [" p1-name "] failed with " r1 ", terminating chain.")
+              (fail r1)))))
+      :name parser-name)))
   ([parser1 parser2 & parsers] (fold then (cons parser1 (cons parser2 parsers)))))
 
 (defn literal [lit]
@@ -238,12 +238,10 @@
 
 (defn trace [p]
   (let [name (parser-name p)]
-  (parser 
-  (fn [x]
-    (debug "Entering " parser-name " with: " x)
-    (let [r0 (p x)]
-      (debug parser-name "produced result: " r0)
-      r0)
-    )
-  :name (str name " [+Trace]")
-  )))
+    (parser
+     (fn [x]
+       (debug "Entering " parser-name " with: " x)
+       (let [r0 (p x)]
+         (debug parser-name "produced result: " r0)
+         r0))
+     :name (str name " [+Trace]"))))
