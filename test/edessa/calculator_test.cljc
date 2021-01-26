@@ -183,6 +183,11 @@
     {:operator (operator-token->keyword (first xs))
      :operands [(second xs)]}))
 
+(defn combine-fragments [x]
+                    (let [xs (filter not-nil? x)]
+                      (debug "Folding " (pr-str xs))
+                      (r/fold combine-subexpr xs)))
+
 (def term (parser
            (then factor
                  (parser
@@ -196,11 +201,8 @@
                             :name "Term branch - (/ <factor>)")))
 
                   ))
-                  :using
-                  (fn [x]
-                    (let [xs (filter not-nil? x)]
-                      (debug "Folding " (pr-str xs))
-                      (r/fold combine-subexpr xs)))
+                  :using combine-fragments
+                  
 
            :name "Term"
            ))
@@ -210,10 +212,12 @@
                  (star
                   (parser
                    (choice
-                    (then plus-token term)
-                    (then minus-token term))
+                    (parser (then plus-token term)
+                            :using create-subexpr-fragment)
+                    (parser (then minus-token term)
+                            :using create-subexpr-fragment))
                    :name "right-expr")))
-           :using transform-term
+           :using combine-fragments
            :name "Expr"))
 
 (defn log-result [x stage]
@@ -276,6 +280,17 @@
       (is (success? r0))
       (is (= '[{:operator :multiply, :operands [{:operator :multiply
 , :operands [{:operator :multiply, :operands [1 2]} 3]} 4]}]
+             (result r0))))))
+
+(deftest long-chain-expression2
+  (with-merged-config
+    {:min-level :info
+     :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}}
+    (let [input "1 + 2 + 3+4"
+          r0 (parse-calc-text input)]
+      (is (success? r0))
+      (is (= '[{:operator :add, :operands [{:operator :add
+, :operands [{:operator :add, :operands [1 2]} 3]} 4]}]
              (result r0))))))
 
 (deftest long-multiply-and-divide-chain-expression
