@@ -106,30 +106,14 @@
 
 (declare expr)
 
-(defn transform-factor [x]
-  (let [components (filter not-nil? x)
-        nextval (first components)]
-    (info "factor: " (pr-str components))
-    (m/match components
-             ([n :guard number?] :seq) n
-             ([_ :guard is-left-paren-token?
-               e
-               _ :guard is-right-paren-token?] :seq) e)))
-
-(def factor (parser
-             (then
-              (choice
-               number-token
-               (then
-                left-paren-token
-                #'expr
-                right-paren-token)))
-             :using transform-factor))
-
 (defn transform-term [x]
   (info "Transform term " (pr-str x))
-  (m/match x
+  (let [components (filter not-nil? x)]
+  (m/match components
     ([n :guard number?] :seq) n
+    ([_ :guard is-left-paren-token?
+     e
+     _ :guard is-right-paren-token?] :seq) e
     ([n1 
       op :guard is-operator-token?
       n2] :seq)
@@ -146,7 +130,17 @@
       n2] :seq)
     {:operator (operator-token->keyword op)
      :operands [n1 n2]}
-    ([op] :seq) op))
+    ([op] :seq) op)))
+
+(def factor (parser
+             (then
+              (choice
+               number-token
+               (then
+                left-paren-token
+                #'expr
+                right-paren-token)))
+             :using transform-term))
 
 (def term (parser
            (then factor
