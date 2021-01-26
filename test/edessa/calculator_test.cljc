@@ -242,6 +242,11 @@
   (with-level :info
   (let [input "3 * (1 +2)"
         r0 (parse-calc-text input)]
+    (info input " result: " r0)
     (is (success? r0))
-    (info input " result: " r0))
+    (is (= '[({:operator :multiply
+               :operands [3 [{:operator :add 
+                             :operands [1 2]}]]})]
+           (result r0)))
+    )
   ))
