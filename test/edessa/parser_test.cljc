@@ -178,3 +178,17 @@
     (is (success? r0))
     (is (= [\a] (result r0)))
     (is (input-consumed? r0))))
+
+(deftest match-with-combinator
+  (let [p (match-with number?)
+        r0 (apply-parser p [300])]
+    (is (success? r0))
+    (is (= '[300] (result r0)))
+    (is (input-consumed? r0))))
+
+(deftest trace-combinator
+  (let [p (trace (match \a))
+        r0 (apply-parser p "abc")]
+    (is (success? r0))
+    (is (= '[\a] (result r0)))
+    (is (not (input-consumed? r0)))))
