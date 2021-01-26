@@ -77,7 +77,7 @@
 (def is-numbert? (fn [x] (= (:token x) :number)))
 
 (def number-token (parser (match-with is-numbert?)
-                          :using (fn [x] 
+                          :using (fn [x]
                                    (debug "number-token " x)
                                    (:value (first x)))))
 
@@ -109,28 +109,28 @@
 (defn transform-term [x]
   (debug "Transform term " (pr-str x))
   (let [components (filter not-nil? x)]
-  (m/match components
-    ([n :guard number?] :seq) n
-    ([_ :guard is-left-paren-token?
-     e
-     _ :guard is-right-paren-token?] :seq) e
-    ([n1 
-      op :guard is-operator-token?
-      n2] :seq)
-    {:operator (operator-token->keyword op)
-     :operands [(transform-term [n1])
-                (transform-term [n2])]}
-    ([n1 
-      op :guard is-operator-token?
-      & ns] :seq)
-    {:operator (operator-token->keyword op)
-     :operands [n1 (transform-term ns)]}
-    ([op :guard is-operator-token?
-      n1
-      n2] :seq)
-    {:operator (operator-token->keyword op)
-     :operands [n1 n2]}
-    ([op] :seq) op)))
+    (m/match components
+      ([n :guard number?] :seq) n
+      ([_ :guard is-left-paren-token?
+        e
+        _ :guard is-right-paren-token?] :seq) e
+      ([n1
+        op :guard is-operator-token?
+        n2] :seq)
+      {:operator (operator-token->keyword op)
+       :operands [(transform-term [n1])
+                  (transform-term [n2])]}
+      ([n1
+        op :guard is-operator-token?
+        & ns] :seq)
+      {:operator (operator-token->keyword op)
+       :operands [n1 (transform-term ns)]}
+      ([op :guard is-operator-token?
+        n1
+        n2] :seq)
+      {:operator (operator-token->keyword op)
+       :operands [n1 n2]}
+      ([op] :seq) op)))
 
 (def factor (parser
              (then
@@ -153,12 +153,12 @@
 
 (def expr (parser
            (then term
-                 (star 
-                   (parser
-                  (choice
-                   (then plus-token term)
-                   (then minus-token term))
-                  :name "right-expr")))
+                 (star
+                  (parser
+                   (choice
+                    (then plus-token term)
+                    (then minus-token term))
+                   :name "right-expr")))
            :using transform-term))
 
 (defn parse-calc-text [input]
@@ -201,8 +201,8 @@
           r0 (parse-calc-text input)]
       (debug input " result: " r0)
       (is (success? r0))
-      (is (= '[{:operator :subtract, :operands [{:operator :multiply, :operands [-300 {:operator :multiply, :operands [4 {:operator 
-:multiply, :operands [111 4]}]}]} {:operator :add, :operands [{:operator :multiply, :operands [1 3]} 1]}]}]
+      (is (= '[{:operator :subtract, :operands [{:operator :multiply, :operands [-300 {:operator :multiply, :operands [4 {:operator
+                                                                                                                          :multiply, :operands [111 4]}]}]} {:operator :add, :operands [{:operator :multiply, :operands [1 3]} 1]}]}]
              (result r0))))))
 
 (deftest simple-multiplication
@@ -220,7 +220,7 @@
           r0 (parse-calc-text input)]
       (debug input " result: " r0)
       (is (success? r0))
-      (is (= '[{:operator :multiply 
+      (is (= '[{:operator :multiply
                 :operands [100
                            {:operator :multiply
                             :operands [200 300]}]}]
@@ -233,9 +233,9 @@
       (debug input " result: " r0)
       (is (success? r0))
       (is (= '[{:operator :multiply
-                 :operands [100
-                            {:operator :multiply
-                              :operands [200 300]}]}]
+                :operands [100
+                           {:operator :multiply
+                            :operands [200 300]}]}]
              (result r0))))))
 
 (deftest chain-multiplication3
@@ -245,11 +245,11 @@
       (debug input " result: " r0)
       (is (success? r0))
       (is (= '[{:operator :multiply
-                 :operands [100
-                            {:operator :multiply
-                              :operands [200
-                                         {:operator :multiply
-                                          :operands [300 400]}]}]}]
+                :operands [100
+                           {:operator :multiply
+                            :operands [200
+                                       {:operator :multiply
+                                        :operands [300 400]}]}]}]
              (result r0))))))
 
 (deftest parenthesized-expressions
@@ -268,6 +268,6 @@
       (debug input " result: " r0)
       (is (success? r0))
       (is (= '[{:operator :multiply
-                 :operands [3 {:operator :add
-                                :operands [1 2]}]}]
+                :operands [3 {:operator :add
+                              :operands [1 2]}]}]
              (result r0))))))
