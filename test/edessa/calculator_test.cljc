@@ -151,19 +151,6 @@
                    (then slash-token factor))))
            :using transform-term))
 
-(defn transform-expr [x]
-  (info "expr " (pr-str x))
-  (let [components (filter not-nil? x)]
-    (info "expr components " (pr-str components))
-    (m/match components
-      ([n1 op n2] :seq)
-      {:operator (operator-token->keyword op)
-       :operands [n1 n2]}
-      ([n1 op & ns] :seq)
-      {:operator (operator-token->keyword op)
-       :operands [n1 (transform-term ns)]}
-      ([op] :seq) op)))
-
 (def expr (parser
            (then term
                  (star 
@@ -172,7 +159,7 @@
                    (then plus-token term)
                    (then minus-token term))
                   :name "right-expr")))
-           :using transform-expr))
+           :using transform-term))
 
 (defn parse-calc-text [input]
   (-> input
