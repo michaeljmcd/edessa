@@ -1,6 +1,7 @@
 (ns edessa.calculator-test
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
+            [clojure.core.match :as m]
             [edessa.parser :refer :all]
             [taoensso.timbre :as t :refer [debug error info with-level]]
             [clojure.java.io :as io]))
@@ -65,7 +66,9 @@
 
 ; Number ::= Digit+
 
-(def left-paren-token (parser (match-with (fn [x] (= (:token x) :open-parentheses)))))
+(defn is-left-paren-token? [x] (= (:token x) :open-parentheses))
+
+(def left-paren-token (parser (match-with is-left-paren-token?)))
 
 (def right-paren-token (parser (match-with (fn [x] (= (:token x) :close-parentheses)))))
 
@@ -76,30 +79,80 @@
 
 (def plus-token (parser (match {:token :operator :value "+"})))
 
-(def minus-token (parser (match {:token :operator :value "-"})))
+(defn minus-token? [x]
+  (= x {:token :operator :value "-"}))
+
+(def minus-token (parser (match-with minus-token?)))
 
 (def star-token (parser (match {:token :operator :value "*"})))
 
 (def slash-token (parser (match {:token :operator :value "/"})))
 
-(def operator-token (parser (match-with (fn [x] (= (:token x) :operator)))))
+(defn is-operator-token? [x] (= (:token x) :operator))
+
+(def operator-token (parser (match-with is-operator-token?)))
+
+(defn operator-token->keyword [t]
+  (case (:value t)
+    "*" :multiply
+    "+" :add
+    "-" :subtract
+    "/" :divide))
 
 (declare expr)
 
-(def factor (then
-              (optional minus-token)
-              (choice
-                number-token
-                (then 
-                  left-paren-token
-                  #'expr
-                  right-paren-token))))
+(defn transform-factor [x]
+   (let [components (filter not-nil? x)
+         nextval (first components)]
+   (info "factor: " (pr-str components))
+   (cond
+     (number? nextval) nextval
+     (minus-token? nextval)
+      {:operator :multiply
+       :operands [-1 (transform-factor (rest components))]} ; Let me get it working first, then I'll clean it up.
+      (is-numbert? nextval)
+       (:value nextval)
+     (is-left-paren-token? nextval)  ; parenthesized expression
+      (transform-factor (subvec (into [] components) 1 (- (count components) 1)))
+     (= (count components) 3) ; presumably a simple <val> operand <val> expr
+      {:operator (-> components (nth 1) operator-token->keyword)
+       :operands [(transform-factor [(first components)])
+                  (transform-factor [(nth 2 components)])]}
+      :else nextval
+    )
+     )
+   )
 
-(def term (then factor
+(def factor (parser
+              (then
+                (optional minus-token)
+                (choice
+                  number-token
+                  (then 
+                    left-paren-token
+                    #'expr
+                    right-paren-token)))
+              :using transform-factor))
+
+(defn transform-term [x]
+  (info "Transform term " (pr-str x))
+  (m/match x
+           ([n :guard number?] :seq) n
+           ([n1 :guard number?
+             op :guard is-operator-token?
+             n2 :guard number?] :seq)
+            {:operator (operator-token->keyword op)
+             :operands [n1 n2]}
+           :else x
+           ))
+
+(def term (parser
+            (then factor
                 (star
                   (choice 
                     (then star-token factor)
-                    (then slash-token factor)))))
+                    (then slash-token factor))))
+            :using transform-term))
 
 (def expr (parser
             (then term 
@@ -128,6 +181,16 @@
     result (parse-calc-text input)]
     (is (success? result))
     (info "1 + 1 result: " result))
+
+  (let [input "-1 - -1"
+        result (parse-calc-text input)]
+    (is (success? result))
+    (info input " result: " result))
+
+  (let [input "-300 * 4 * 111"
+        result (parse-calc-text input)]
+    (is (success? result))
+    (info input " result: " result))
   
   (let [input "371 * 44"
         result (parse-calc-text input)]
