@@ -78,7 +78,7 @@
 
 (def number-token (parser (match-with is-numbert?)
                           :using (fn [x] 
-                                   (info "number-token " x)
+                                   (debug "number-token " x)
                                    (:value (first x)))))
 
 (def plus-token (parser (match {:token :operator :value "+"})))
@@ -107,7 +107,7 @@
 (declare expr)
 
 (defn transform-term [x]
-  (info "Transform term " (pr-str x))
+  (debug "Transform term " (pr-str x))
   (let [components (filter not-nil? x)]
   (m/match components
     ([n :guard number?] :seq) n
@@ -147,7 +147,7 @@
                  (star
                   (choice
                    (parser (then star-token factor)
-                           :using (fn [x] (info " * <factor" x) x))
+                           :using (fn [x] (debug " * <factor" x) x))
                    (then slash-token factor))))
            :using transform-term))
 
@@ -215,7 +215,7 @@
              (result r0))))))
 
 (deftest chain-multiplication
-  (with-level :debug
+  (with-level :info
     (let [input "100 * 200*300"
           r0 (parse-calc-text input)]
       (debug input " result: " r0)
