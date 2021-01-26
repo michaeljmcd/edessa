@@ -28,7 +28,7 @@
   (let [r (apply-parser epsilon "asdf")]
     (is (success? r))
     (is (= "asdf" (remaining r)))
-    (is (= {:input "asdf", :position 0, :line-number 0, :column 0, :result [nil], :failed false, :error nil}
+    (is (= '{:input "asdf", :position 0, :line-number 0, :column 0, :result [], :failed false, :error nil}
            r)))
 
   (let [p (match \a)
@@ -110,7 +110,7 @@
     (is (= [\b \c] (remaining r0)))
 
     (is (success? r1))
-    (is (= [nil] (result r1)))
+    (is (= [] (result r1)))
     (is (= "dabc" (remaining r1)))))
 
 (deftest one-of-operator
@@ -138,7 +138,7 @@
         r0 (apply-parser p "asdf")]
     (is (success? r0))
     (is (= "asdf" (remaining r0)))
-    (is (= [nil] (result r0))))
+    (is (= [] (result r0))))
 
   (let [p (then (match \a))
         r0 (apply-parser p "asdf")]
@@ -156,7 +156,7 @@
         r0 (apply-parser p "asdf")]
     (is (success? r0))
     (is (= [] (remaining r0)))
-    (is (= [nil \a \s \d \f] (result r0)))))
+    (is (= [\a \s \d \f] (result r0)))))
 
 (deftest literal-operator
   (let [p (literal "aa")

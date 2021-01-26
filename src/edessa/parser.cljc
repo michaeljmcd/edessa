@@ -106,8 +106,7 @@
   (first (get inp :input)))
 
 (def epsilon
-  (parser (partial succeed nil)
-          :name "Epsilon (empty)"))
+  (parser identity :name "Epsilon (empty)"))
 
 (defn fail {:parser "Fail"}
   ([inp]
