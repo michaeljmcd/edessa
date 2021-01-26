@@ -221,18 +221,22 @@
 (deftest simple-valid-expressions
   (with-level :info
   (let [input "371 * 44"
-        result (parse-calc-text input)]
-    (is (success? result))
-    (info "371 * 44 result: " result))
-  ))
+        r0 (parse-calc-text input)]
+    (info "371 * 44 result: " r0)
+    (is (success? r0))
+    (is (= '[({:operator :multiply :operands [371 44]})]
+           (result r0)))
+  )))
 
 (deftest parenthesized-expressions
   (with-level :info
   (let [input "(44.1 * 33)"
         result (parse-calc-text input)]
     (is (success? result))
-    (info input " result: " result))
+    (info input " result: " result))))
   
+(deftest simple-compound-expression
+  (with-level :info
   (let [input "3 * (1 +2)"
         r0 (parse-calc-text input)]
     (is (success? r0))
