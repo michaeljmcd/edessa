@@ -37,7 +37,7 @@
                      (optional (match \-))
                      digits
                      (optional (then dot digits)))
-                    :using (fn [x] (info "Number parsing " (apply str (filter not-nil? x)))
+                    :using (fn [x] (debug "Number parsing " (apply str (filter not-nil? x)))
                              {:token :number
                               :value (read-string (apply str x))})))
 
@@ -68,14 +68,16 @@
 
 (defn is-left-paren-token? [x] (= (:token x) :open-parentheses))
 
+(defn is-right-paren-token? [x] (= (:token x) :close-parentheses))
+
 (def left-paren-token (parser (match-with is-left-paren-token?)))
 
-(def right-paren-token (parser (match-with (fn [x] (= (:token x) :close-parentheses)))))
+(def right-paren-token (parser (match-with is-right-paren-token?)))
 
 (def is-numbert? (fn [x] (= (:token x) :number)))
 
 (def number-token (parser (match-with is-numbert?)
-                          :using (fn [x] (info "Number token " (pr-str x)) (:value (first x)))))
+                          :using (fn [x] (debug "Number token " (pr-str x)) (:value (first x)))))
 
 (def plus-token (parser (match {:token :operator :value "+"})))
 
@@ -101,24 +103,34 @@
 
 (declare expr)
 
+;(defn transform-factor [x]
+;  (let [components (filter not-nil? x)
+;        nextval (first components)]
+;    (debug "factor: " (pr-str components))
+;    (cond
+;      (number? nextval) nextval
+;      (minus-token? nextval)
+;      {:operator :multiply
+;       :operands [-1 (transform-factor (rest components))]} ; Let me get it working first, then I'll clean it up.
+;      (is-numbert? nextval)
+;      (:value nextval)
+;      (is-left-paren-token? nextval)  ; parenthesized expression
+;      (transform-factor (subvec (into [] components) 1 (- (count components) 1)))
+;      (= (count components) 3) ; presumably a simple <val> operand <val> expr
+;      {:operator (-> components (nth 1) operator-token->keyword)
+;       :operands [(transform-factor [(first components)])
+;                  (transform-factor [(nth 2 components)])]}
+;      :else nextval)))
+
 (defn transform-factor [x]
   (let [components (filter not-nil? x)
         nextval (first components)]
     (info "factor: " (pr-str components))
-    (cond
-      (number? nextval) nextval
-      (minus-token? nextval)
-      {:operator :multiply
-       :operands [-1 (transform-factor (rest components))]} ; Let me get it working first, then I'll clean it up.
-      (is-numbert? nextval)
-      (:value nextval)
-      (is-left-paren-token? nextval)  ; parenthesized expression
-      (transform-factor (subvec (into [] components) 1 (- (count components) 1)))
-      (= (count components) 3) ; presumably a simple <val> operand <val> expr
-      {:operator (-> components (nth 1) operator-token->keyword)
-       :operands [(transform-factor [(first components)])
-                  (transform-factor [(nth 2 components)])]}
-      :else nextval)))
+    (m/match components
+             ([n :guard number?] :seq) n
+             ([_ :guard is-left-paren-token?
+               e
+               _ :guard is-right-paren-token?] :seq) e)))
 
 (def factor (parser
              (then
@@ -132,7 +144,7 @@
              :using transform-factor))
 
 (defn transform-term [x]
-  (info "Transform term " (pr-str x))
+  (debug "Transform term " (pr-str x))
   (m/match x
     ([n :guard number?] :seq) n
     ([n1 op n2] :seq)
@@ -151,7 +163,7 @@
 
 (defn transform-expr [x]
   (let [components (filter not-nil? x)]
-    (info "expr components " (pr-str components))
+    (debug "expr components " (pr-str components))
     (m/match components
       ([n1 op n2] :seq)
       {:operator (operator-token->keyword op)
@@ -185,7 +197,7 @@
   (with-level :info
     (let [input "1 + 1"
           r0 (parse-calc-text input)]
-      (info "1 + 1 result: " (pr-str result))
+      (debug "1 + 1 result: " (pr-str result))
       (is (success? r0))
       (is (= '({:operator :add :operands [1 1]})
              (result r0))))))
@@ -194,7 +206,7 @@
   (with-level :info
     (let [input "-1 - -1"
           r0 (parse-calc-text input)]
-      (info input " result: " r0)
+      (debug input " result: " r0)
       (is (success? r0))
       (is (= '[{:operator :subtract
                 :operands [-1 -1]}]
@@ -203,15 +215,19 @@
 (deftest long-chain-expression
   (with-level :info
     (let [input "-300 * 4 * 111 * 4 + 1 * 3 - 1"
-          result (parse-calc-text input)]
-      (is (success? result))
-      (info input " result: " result))))
+          r0 (parse-calc-text input)]
+      (debug input " result: " r0)
+      (is (success? r0))
+      (is (= '[({:operator :multiply
+                 :operands [-300
+                            ]})]
+             (result r0))))))
 
 (deftest simple-valid-expressions
   (with-level :info
     (let [input "371 * 44"
           r0 (parse-calc-text input)]
-      (info "371 * 44 result: " r0)
+      (debug "371 * 44 result: " r0)
       (is (success? r0))
       (is (= '[({:operator :multiply :operands [371 44]})]
              (result r0))))))
@@ -220,7 +236,7 @@
   (with-level :info
     (let [input "(44.1 * 33)"
           r0 (parse-calc-text input)]
-      (info input " result: " result)
+      (debug input " result: " result)
       (is (success? result))
       (is (= '[({:operator :multiply :operands [44.1 33]})]
              (result r0))))))
@@ -229,7 +245,7 @@
   (with-level :info
     (let [input "3 * (1 +2)"
           r0 (parse-calc-text input)]
-      (info input " result: " r0)
+      (debug input " result: " r0)
       (is (success? r0))
       (is (= '[({:operator :multiply
                  :operands [3 [{:operator :add
