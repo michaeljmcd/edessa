@@ -168,15 +168,14 @@
           (= (:operator v1) (:operator v2)))
      {:operator (:operator v1) :operands (concat (:operands v1) (:operands v2))}
      (number? v1)
-      (assoc v2
-             :operands
-             (cons v1 (:operands v2)))
+     (assoc v2
+            :operands
+            (cons v1 (:operands v2)))
      :else
      (assoc v2
             :operands
             (cons v1
-                  (into [] (:operands v2))
-                  )))))
+                  (into [] (:operands v2)))))))
 
 (defn create-subexpr-fragment [x]
   (let [xs (filter not-nil? x)]
@@ -184,9 +183,9 @@
      :operands [(second xs)]}))
 
 (defn combine-fragments [x]
-                    (let [xs (filter not-nil? x)]
-                      (debug "Folding " (pr-str xs))
-                      (r/fold combine-subexpr xs)))
+  (let [xs (filter not-nil? x)]
+    (debug "Folding " (pr-str xs))
+    (r/fold combine-subexpr xs)))
 
 (def term (parser
            (then factor
@@ -198,14 +197,11 @@
                                    :name "Term branch - (* <factor>)"))
                     (parser (then slash-token factor)
                             :using create-subexpr-fragment
-                            :name "Term branch - (/ <factor>)")))
+                            :name "Term branch - (/ <factor>)")))))
 
-                  ))
-                  :using combine-fragments
-                  
+           :using combine-fragments
 
-           :name "Term"
-           ))
+           :name "Term"))
 
 (def expr (parser
            (then term
@@ -279,7 +275,7 @@
           r0 (parse-calc-text input)]
       (is (success? r0))
       (is (= '[{:operator :multiply, :operands [{:operator :multiply
-, :operands [{:operator :multiply, :operands [1 2]} 3]} 4]}]
+                                                 , :operands [{:operator :multiply, :operands [1 2]} 3]} 4]}]
              (result r0))))))
 
 (deftest long-chain-expression2
@@ -290,7 +286,7 @@
           r0 (parse-calc-text input)]
       (is (success? r0))
       (is (= '[{:operator :add, :operands [{:operator :add
-, :operands [{:operator :add, :operands [1 2]} 3]} 4]}]
+                                            , :operands [{:operator :add, :operands [1 2]} 3]} 4]}]
              (result r0))))))
 
 (deftest long-multiply-and-divide-chain-expression
@@ -301,16 +297,12 @@
           r0 (parse-calc-text input)]
       (is (success? r0))
       (is (= '[{:operator :divide
-                :operands[{:operator :multiply,
-                           :operands [
-                                      {:operator :multiply, 
-                                       :operands [
-                                                  {:operator :multiply, 
-                                                   :operands [1 2]}
-                                                 3 
-                                                  ]} 4 
-                                      ]}
-                          5]}]
+                :operands [{:operator :multiply,
+                            :operands [{:operator :multiply,
+                                        :operands [{:operator :multiply,
+                                                    :operands [1 2]}
+                                                   3]} 4]}
+                           5]}]
              (result r0))))))
 
 (deftest shorter-chain-expression2
@@ -345,7 +337,7 @@
       (is (success? r0))
       (is (= '[{:operator :multiply
                 :operands [-300
-                           {:operator :multiply, 
+                           {:operator :multiply,
                             :operands [4
                                        {:operator :multiply,
                                         :operands [111 5]}]}]}]
