@@ -231,9 +231,12 @@
 (deftest parenthesized-expressions
   (with-level :info
   (let [input "(44.1 * 33)"
-        result (parse-calc-text input)]
+        r0 (parse-calc-text input)]
+    (info input " result: " result)
     (is (success? result))
-    (info input " result: " result))))
+    (is (= '[({:operator :multiply :operands [44.1 33]})]
+           (result r0)))
+    )))
   
 (deftest simple-compound-expression
   (with-level :info
