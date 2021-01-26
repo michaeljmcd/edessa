@@ -138,11 +138,10 @@
   (info "Transform term " (pr-str x))
   (m/match x
            ([n :guard number?] :seq) n
-           ([n1 :guard number?
-             op :guard is-operator-token?
-             n2 :guard number?] :seq)
+            ([n1 op n2] :seq)
             {:operator (operator-token->keyword op)
-             :operands [n1 n2]}
+             :operands [(transform-term [n1])
+                        (transform-term [n2])]}
            :else x
            ))
 
@@ -154,18 +153,25 @@
                     (then slash-token factor))))
             :using transform-term))
 
+(defn transform-expr [x]
+                (let [components (filter not-nil? x)]
+                  (info "expr components " (pr-str components))
+                  (m/match components
+                           ([n1 op n2] :seq)
+                            {:operator (operator-token->keyword op)
+                             :operands [n1 n2]}
+                           :else components
+                           )
+                ))
+
 (def expr (parser
             (then term 
                 (star
                   (choice
                     (then plus-token term)
                     (then minus-token term))))
-            :using 
-              (fn [x] 
-                (let [components (filter not-nil? x)]
-                  (info "expr components " (pr-str components))
-                  components
-                ))))
+            :using transform-expr
+              ))
 
 (defn parse-calc-text [input]
   (-> input
@@ -175,23 +181,45 @@
         make-input
         expr))
 
-(deftest simple-valid-expressions
+(deftest atomic-number-expression
+  (with-level :info
+    (let [input "39"
+          r0 (parse-calc-text input)]
+      (is (success? result))
+      (is (= '[(39)] (result r0)))
+      )))
+
+(deftest simple-addition-expression
   (with-level :info
   (let [input "1 + 1"
-    result (parse-calc-text input)]
-    (is (success? result))
-    (info "1 + 1 result: " result))
+    r0 (parse-calc-text input)]
+    (info "1 + 1 result: " (pr-str result))
+    (is (success? r0))
+    (is (= '({:operator :add :operands [1 1]})
+           (result r0)))
+    )))
 
+(deftest subtraction-with-negatives-expression
+  (with-level :info
   (let [input "-1 - -1"
-        result (parse-calc-text input)]
-    (is (success? result))
-    (info input " result: " result))
+        r0 (parse-calc-text input)]
+    (info input " result: " r0)
+    (is (success? r0))
+    (is (= '[{:operator :subtract
+              :operands [-1 -1]}]
+           (result r0)))
+  )))
 
-  (let [input "-300 * 4 * 111"
+(deftest long-chain-expression
+  (with-level :info
+  (let [input "-300 * 4 * 111 * 4 + 1 * 3 - 1"
         result (parse-calc-text input)]
     (is (success? result))
     (info input " result: " result))
+  ))
   
+(deftest simple-valid-expressions
+  (with-level :info
   (let [input "371 * 44"
         result (parse-calc-text input)]
     (is (success? result))
@@ -203,4 +231,10 @@
   (let [input "(44.1 * 33)"
         result (parse-calc-text input)]
     (is (success? result))
-    (info input " result: " result))))
+    (info input " result: " result))
+  
+  (let [input "3 * (1 +2)"
+        r0 (parse-calc-text input)]
+    (is (success? r0))
+    (info input " result: " r0))
+  ))
