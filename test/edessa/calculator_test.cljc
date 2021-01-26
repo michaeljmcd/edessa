@@ -37,7 +37,7 @@
                      (optional (match \-))
                      digits
                      (optional (then dot digits)))
-                    :using (fn [x] (debug "Number parsing " (apply str (filter not-nil? x)))
+                    :using (fn [x]
                              {:token :number
                               :value (read-string (apply str x))})))
 
@@ -77,7 +77,9 @@
 (def is-numbert? (fn [x] (= (:token x) :number)))
 
 (def number-token (parser (match-with is-numbert?)
-                          :using (fn [x] (debug "Number token " (pr-str x)) (:value (first x)))))
+                          :using (fn [x] 
+                                   (info "number-token " x)
+                                   (:value (first x)))))
 
 (def plus-token (parser (match {:token :operator :value "+"})))
 
@@ -103,25 +105,6 @@
 
 (declare expr)
 
-;(defn transform-factor [x]
-;  (let [components (filter not-nil? x)
-;        nextval (first components)]
-;    (debug "factor: " (pr-str components))
-;    (cond
-;      (number? nextval) nextval
-;      (minus-token? nextval)
-;      {:operator :multiply
-;       :operands [-1 (transform-factor (rest components))]} ; Let me get it working first, then I'll clean it up.
-;      (is-numbert? nextval)
-;      (:value nextval)
-;      (is-left-paren-token? nextval)  ; parenthesized expression
-;      (transform-factor (subvec (into [] components) 1 (- (count components) 1)))
-;      (= (count components) 3) ; presumably a simple <val> operand <val> expr
-;      {:operator (-> components (nth 1) operator-token->keyword)
-;       :operands [(transform-factor [(first components)])
-;                  (transform-factor [(nth 2 components)])]}
-;      :else nextval)))
-
 (defn transform-factor [x]
   (let [components (filter not-nil? x)
         nextval (first components)]
@@ -134,7 +117,7 @@
 
 (def factor (parser
              (then
-              (optional minus-token)
+              ;(optional minus-token)
               (choice
                number-token
                (then
@@ -144,14 +127,14 @@
              :using transform-factor))
 
 (defn transform-term [x]
-  (debug "Transform term " (pr-str x))
+  (info "Transform term " (pr-str x))
   (m/match x
     ([n :guard number?] :seq) n
     ([n1 op n2] :seq)
     {:operator (operator-token->keyword op)
      :operands [(transform-term [n1])
                 (transform-term [n2])]}
-    :else x))
+    ([op] :seq) op))
 
 (def term (parser
            (then factor
@@ -162,13 +145,15 @@
            :using transform-term))
 
 (defn transform-expr [x]
+  (info "expr " (pr-str x))
   (let [components (filter not-nil? x)]
-    (debug "expr components " (pr-str components))
+    (info "expr components " (pr-str components))
     (m/match components
       ([n1 op n2] :seq)
       {:operator (operator-token->keyword op)
        :operands [n1 n2]}
-      :else components)))
+      ([op] :seq) op
+      )))
 
 (def expr (parser
            (then term
@@ -223,13 +208,34 @@
                             ]})]
              (result r0))))))
 
-(deftest simple-valid-expressions
+(deftest simple-multiplication
   (with-level :info
     (let [input "371 * 44"
           r0 (parse-calc-text input)]
-      (debug "371 * 44 result: " r0)
+      (debug input " result: " r0)
       (is (success? r0))
       (is (= '[({:operator :multiply :operands [371 44]})]
+             (result r0))))))
+
+(deftest chain-multiplication
+  (with-level :info
+    (let [input "100 * 200*300"
+          r0 (parse-calc-text input)]
+      (debug input " result: " r0)
+      (is (success? r0))
+      (is (= '[({:operator :multiply :operands [371 44]})]
+             (result r0))))))
+
+(deftest chain-multiplication2
+  (with-level :info
+    (let [input "100 * (200*300)"
+          r0 (parse-calc-text input)]
+      (debug input " result: " r0)
+      (is (success? r0))
+      (is (= '[{:operator :multiply
+                 :operands [100
+                            {:operator :multiply
+                              :operands [200 300]}]}]
              (result r0))))))
 
 (deftest parenthesized-expressions
