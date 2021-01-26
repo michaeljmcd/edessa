@@ -7,8 +7,6 @@
             [taoensso.timbre :as t :refer [debug error info with-level with-merged-config spit-appender]]
             [clojure.java.io :as io]))
 
-(def not-nil? (comp not nil?))
-
 ; The general idea is to do a two pass compiler on a simple calculator for no
 ; other reason than to provide a different take on parsing for test purposes.
 
@@ -116,33 +114,32 @@
 
 (declare expr)
 
-(defn transform-term [x]
-  (debug "Transform term " (pr-str x))
-  (let [components (filter not-nil? x)]
-    (m/match components
-      ([n :guard number?] :seq) n
-      ([_ :guard is-left-paren-token?
-        e
-        _ :guard is-right-paren-token?] :seq) e
-      ([n1
-        op :guard is-operator-token?
-        n2] :seq)
+(defn transform-term [components]
+  (debug "Transform term " (pr-str components))
+  (m/match components
+    ([n :guard number?] :seq) n
+    ([_ :guard is-left-paren-token?
+      e
+      _ :guard is-right-paren-token?] :seq) e
+    ([n1
+      op :guard is-operator-token?
+      n2] :seq)
+    {:operator (operator-token->keyword op)
+     :operands [(transform-term [n1])
+                (transform-term [n2])]}
+    ([n1
+      op :guard is-operator-token?
+      & ns] :seq)
+    (do
+      (debug "transform-term, > 3 elements. Extra: " (pr-str ns))
       {:operator (operator-token->keyword op)
-       :operands [(transform-term [n1])
-                  (transform-term [n2])]}
-      ([n1
-        op :guard is-operator-token?
-        & ns] :seq)
-      (do
-        (debug "transform-term, > 3 elements. Extra: " (pr-str ns))
-        {:operator (operator-token->keyword op)
-         :operands [n1 (transform-term ns)]})
-      ([op :guard is-operator-token?
-        n1
-        n2] :seq)
-      {:operator (operator-token->keyword op)
-       :operands [n1 n2]}
-      ([op] :seq) op)))
+       :operands [n1 (transform-term ns)]})
+    ([op :guard is-operator-token?
+      n1
+      n2] :seq)
+    {:operator (operator-token->keyword op)
+     :operands [n1 n2]}
+    ([op] :seq) op))
 
 (def factor (parser
              (then
@@ -177,15 +174,13 @@
             (cons v1
                   (into [] (:operands v2)))))))
 
-(defn create-subexpr-fragment [x]
-  (let [xs (filter not-nil? x)]
-    {:operator (operator-token->keyword (first xs))
-     :operands [(second xs)]}))
+(defn create-subexpr-fragment [xs]
+  {:operator (operator-token->keyword (first xs))
+   :operands [(second xs)]})
 
-(defn combine-fragments [x]
-  (let [xs (filter not-nil? x)]
-    (debug "Folding " (pr-str xs))
-    (r/fold combine-subexpr xs)))
+(defn combine-fragments [xs]
+  (debug "Folding " (pr-str xs))
+  (r/fold combine-subexpr xs))
 
 (def term (parser
            (then factor
