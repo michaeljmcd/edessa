@@ -3,7 +3,7 @@
             [clojure.string :as str]
             [clojure.core.match :as m]
             [edessa.parser :refer :all]
-            [taoensso.timbre :as t :refer [debug error info with-level]]
+            [taoensso.timbre :as t :refer [debug error info with-level with-merged-config spit-appender]]
             [clojure.java.io :as io]))
 
 (def not-nil? (comp not nil?))
@@ -65,32 +65,41 @@
 ; Factor ::= ['-'] (Number | '(' Expr ')')
 
 ; Number ::= Digit+
+;
+; Source: https://stackoverflow.com/questions/9785553/how-does-a-simple-calculator-with-parentheses-work
 
 (defn is-left-paren-token? [x] (= (:token x) :open-parentheses))
 
 (defn is-right-paren-token? [x] (= (:token x) :close-parentheses))
 
-(def left-paren-token (parser (match-with is-left-paren-token?)))
+(def left-paren-token (parser (match-with is-left-paren-token?)
+                              :name "Left Paren"))
 
-(def right-paren-token (parser (match-with is-right-paren-token?)))
+(def right-paren-token (parser (match-with is-right-paren-token?)
+                               :name "Right Paren"))
 
 (def is-numbert? (fn [x] (= (:token x) :number)))
 
 (def number-token (parser (match-with is-numbert?)
+                          :name "Number"
                           :using (fn [x]
                                    (debug "number-token " x)
                                    (:value (first x)))))
 
-(def plus-token (parser (match {:token :operator :value "+"})))
+(def plus-token (parser (match {:token :operator :value "+"})
+                        :name "Plus Operator"))
 
 (defn minus-token? [x]
   (= x {:token :operator :value "-"}))
 
-(def minus-token (parser (match-with minus-token?)))
+(def minus-token (parser (match-with minus-token?)
+                         :name "Minus Operator"))
 
-(def star-token (parser (match {:token :operator :value "*"})))
+(def star-token (parser (match {:token :operator :value "*"})
+                        :name "Multiply Operator"))
 
-(def slash-token (parser (match {:token :operator :value "/"})))
+(def slash-token (parser (match {:token :operator :value "/"})
+                         :name "Divide Operator"))
 
 (defn is-operator-token? [x] (= (:token x) :operator))
 
@@ -107,7 +116,7 @@
 (declare expr)
 
 (defn transform-term [x]
-  (debug "Transform term " (pr-str x))
+  (info "Transform term " (pr-str x))
   (let [components (filter not-nil? x)]
     (m/match components
       ([n :guard number?] :seq) n
@@ -136,20 +145,23 @@
              (then
               (choice
                number-token
-               (then
-                left-paren-token
-                #'expr
-                right-paren-token)))
-             :using transform-term))
+               (parser
+                 (then
+                  left-paren-token
+                  #'expr
+                  right-paren-token)
+                 :name "Parenthesized Expr")))
+             :using transform-term
+             :name "Factor"))
 
 (def term (parser
            (then factor
                  (star
                   (choice
-                   (parser (then star-token factor)
-                           :using (fn [x] (debug " * <factor" x) x))
+                   (then star-token factor)
                    (then slash-token factor))))
-           :using transform-term))
+           :using transform-term
+           :name "Term"))
 
 (def expr (parser
            (then term
@@ -159,15 +171,18 @@
                     (then plus-token term)
                     (then minus-token term))
                    :name "right-expr")))
-           :using transform-term))
+           :using transform-term
+           :name "Expr"))
 
 (defn parse-calc-text [input]
-  (-> input
+  (->> input
       make-input
       tokens
+      (debug "Tokens result: ")
       result
       make-input
-      expr))
+      expr
+      (debug "Parse result: ")))
 
 (deftest atomic-number-expression
   (with-level :info
@@ -196,13 +211,23 @@
              (result r0))))))
 
 (deftest long-chain-expression
-  (with-level :info
-    (let [input "-300 * 4 * 111 * 4 + 1 * 3 - 1"
+  (with-merged-config
+    {:min-level :debug
+     :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}}
+    (let [input "-300 * 4 * 111 * 5 + 1 * 3 - 2"
           r0 (parse-calc-text input)]
-      (debug input " result: " r0)
+      (info input " result: " r0)
       (is (success? r0))
-      (is (= '[{:operator :subtract, :operands [{:operator :multiply, :operands [-300 {:operator :multiply, :operands [4 {:operator
-                                                                                                                          :multiply, :operands [111 4]}]}]} {:operator :add, :operands [{:operator :multiply, :operands [1 3]} 1]}]}]
+      (is (= '[{:operator :subtract, 
+                :operands [{:operator :multiply, 
+                            :operands [-300 
+                                       {:operator :multiply, 
+                                        :operands [4 
+                                                   {:operator :multiply, 
+                                                    :operands [111 4]}]}]} 
+                           {:operator :add, :operands [{:operator :multiply, 
+                                                        :operands [1 3]} 
+                                                       1]}]}]
              (result r0))))))
 
 (deftest simple-multiplication
