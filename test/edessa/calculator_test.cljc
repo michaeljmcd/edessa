@@ -174,15 +174,19 @@
            :using transform-term
            :name "Expr"))
 
+(defn log-result [x stage]
+  (debug stage " result => " x)
+  x)
+
 (defn parse-calc-text [input]
-  (->> input
+  (-> input
       make-input
       tokens
-      (debug "Tokens result: ")
+      (log-result "Tokens")
       result
       make-input
       expr
-      (debug "Parse result: ")))
+      (log-result "Parse")))
 
 (deftest atomic-number-expression
   (with-level :info
