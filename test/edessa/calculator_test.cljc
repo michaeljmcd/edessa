@@ -129,16 +129,16 @@
       {:operator (operator-token->keyword op)
        :operands [(transform-term [n1])
                   (transform-term [n2])]}
-      ([n1
-        op :guard is-operator-token?
-        & ns] :seq)
-      {:operator (operator-token->keyword op)
-       :operands [n1 (transform-term ns)]}
-      ([op :guard is-operator-token?
-        n1
-        n2] :seq)
-      {:operator (operator-token->keyword op)
-       :operands [n1 n2]}
+      ;([n1
+      ;  op :guard is-operator-token?
+      ;  & ns] :seq)
+      ;{:operator (operator-token->keyword op)
+      ; :operands [n1 (transform-term ns)]}
+      ;([op :guard is-operator-token?
+      ;  n1
+      ;  n2] :seq)
+      ;{:operator (operator-token->keyword op)
+      ; :operands [n1 n2]}
       ([op] :seq) op)))
 
 (def factor (parser
@@ -260,20 +260,42 @@
   (with-merged-config
     {:min-level :debug
      :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}}
-    (let [input "-300 * 4 * 111 * 5 + 1 * 3 - 2"
+    (let [input "-300 * 4 * 111 * 5 "
           r0 (parse-calc-text input)]
       (info input " result: " r0)
       (is (success? r0))
-      (is (= '[{:operator :subtract, 
-                :operands [{:operator :multiply, 
-                            :operands [-300 
-                                       {:operator :multiply, 
-                                        :operands [4 
-                                                   {:operator :multiply, 
-                                                    :operands [111 4]}]}]} 
-                           {:operator :add, :operands [{:operator :multiply, 
-                                                        :operands [1 3]} 
-                                                       1]}]}]
+      (is (= '[{:operator :multiply
+                            :operands [-300
+                                       {:operator :multiply
+                                        :operands [ 4 
+                                                   {:operator :multiply
+                                                    :operands [ 111 5 ]}
+                                                               ] }]}
+
+                                       ]
+             (result r0))))))
+
+(deftest mixed-long-chain-expression
+  (with-merged-config
+    {:min-level :debug
+     :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}}
+    (let [input "-300 * 4 * 111 * 5 ";+ 1 * 3 - 2"
+          r0 (parse-calc-text input)]
+      (info input " result: " r0)
+      (is (success? r0))
+      (is (= '[;{:operator :add
+               ; :operands [
+                           {:operator :multiply
+                            :operands [-300
+                                       {:operator :multiply
+                                        :operands [ 4 
+                                                   {:operator :multiply
+                                                    :operands [ 111 5 ]}
+                                                               ] }]}
+
+               ;            ]
+                ;}
+                                       ]
              (result r0))))))
 
 (deftest simple-multiplication
