@@ -235,3 +235,15 @@
   (then parser (star parser)))
 
 (def plus one-or-more)
+
+(defn trace [p]
+  (let [name (parser-name p)]
+  (parser 
+  (fn [x]
+    (debug "Entering " parser-name " with: " x)
+    (let [r0 (p x)]
+      (debug parser-name "produced result: " r0)
+      r0)
+    )
+  :name (str name " [+Trace]")
+  )))

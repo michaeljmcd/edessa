@@ -2,6 +2,7 @@
   (:require [clojure.test :refer :all]
             [clojure.string :as str]
             [clojure.core.match :as m]
+            [clojure.core.reducers :as r]
             [edessa.parser :refer :all]
             [taoensso.timbre :as t :refer [debug error info with-level with-merged-config spit-appender]]
             [clojure.java.io :as io]))
@@ -116,7 +117,7 @@
 (declare expr)
 
 (defn transform-term [x]
-  (info "Transform term " (pr-str x))
+  (debug "Transform term " (pr-str x))
   (let [components (filter not-nil? x)]
     (m/match components
       ([n :guard number?] :seq) n
@@ -132,8 +133,10 @@
       ([n1
         op :guard is-operator-token?
         & ns] :seq)
+      (do
+        (debug "transform-term, > 3 elements. Extra: " (pr-str ns))
       {:operator (operator-token->keyword op)
-       :operands [n1 (transform-term ns)]}
+       :operands [n1 (transform-term ns)]})
       ([op :guard is-operator-token?
         n1
         n2] :seq)
@@ -154,12 +157,45 @@
              :using transform-term
              :name "Factor"))
 
+(defn combine-subexpr 
+  ([] {})
+  ([v1 v2]
+   (println v1 v2)
+   (cond
+     (= v1 {}) v2
+     (and (= 1 (count (:operands v2)))
+          (= 1 (count (:operands v1)))
+          (= (:operator v1) (:operator v2)))
+     {:operator (:operator v1) :operands (concat (:operands v1) (:operands v2))}
+     :else
+     (assoc v2
+            :operands
+            (conj (into [] (:operands v2))
+                  v1))
+  )))
+
+(defn create-subexpr-fragment [x]
+   (let [xs (filter not-nil? x)]
+     {:operator (operator-token->keyword (first xs))
+      :operands [(second xs)]}))
+
 (def term (parser
            (then factor
-                 (star
+                 (parser
+                   (star
                   (choice
-                   (then star-token factor)
-                   (then slash-token factor))))
+                   (trace (parser (then star-token factor)
+                                  :using create-subexpr-fragment
+                                  :name "Term branch - (* <factor>)"))
+                   (then slash-token factor)))
+
+                   :using 
+                   (fn [x]
+                     (let [xs (filter not-nil? x)]
+                       (debug "Folding " xs)
+                       (r/fold combine-subexpr xs)
+                     )))
+                   )
            :using transform-term
            :name "Term"))
 
@@ -227,8 +263,8 @@
 
 (deftest long-chain-expression
 (with-merged-config
-    {:min-level :info
-    ; :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}
+    {:min-level :debug
+     :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}
      }
     (let [input "1 * 2 * 3*4"
           r0 (parse-calc-text input)]
