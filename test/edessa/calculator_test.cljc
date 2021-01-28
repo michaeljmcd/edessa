@@ -178,6 +178,29 @@
   (debug stage " result => " x)
   x)
 
+; Alternatively:
+; E --> P {B P}
+; P --> v | "(" E ")" | U P
+; B --> "+" | "-" | "*" | "/" | "^"
+; U --> "-"
+
+(declare expr2 subexpr)
+
+
+(def subexpr (parser
+             (choice
+               number-token
+               (then left-paren-token
+                     #'expr2
+                     right-paren-token)
+               (then minus-token #'subexpr))
+             :using transform-term))
+
+(def expr2 (parser (then subexpr 
+                         (optional (then operator-token
+                                   subexpr)))
+                   :using transform-term))
+
 (defn parse-calc-text [input]
   (-> input
       make-input
@@ -185,7 +208,7 @@
       (log-result "Tokens")
       result
       make-input
-      expr
+      expr2
       (log-result "Parse")))
 
 (deftest atomic-number-expression
