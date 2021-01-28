@@ -214,6 +214,48 @@
                 :operands [-1 -1]}]
              (result r0))))))
 
+(deftest shorter-chain-expression
+(with-merged-config
+    {:min-level :debug
+    ; :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}
+     }
+    (let [input "1 * 2 * 3"
+          r0 (parse-calc-text input)]
+      (is (success? r0))
+      (is (= '[{:operator :multiply, 
+                :operands [1
+                           {:operator :multiply
+                            :operands [2 3]}]}]
+             (result r0))))))
+
+(deftest shorter-chain-expression2
+(with-merged-config
+    {:min-level :debug
+    ; :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}
+     }
+    (let [input "1 * 2 + 3"
+          r0 (parse-calc-text input)]
+      (is (success? r0))
+      (is (= '[{:operator :add 
+                :operands [{:operator :multiply
+                            :operands [1 2]}
+                           3]}]
+             (result r0))))))
+
+(deftest shorter-chain-expression3
+(with-merged-config
+    {:min-level :debug
+    ; :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}
+     }
+    (let [input "1 * 2 - 3"
+          r0 (parse-calc-text input)]
+      (is (success? r0))
+      (is (= '[{:operator :subtract 
+                :operands [{:operator :multiply
+                            :operands [1 2]}
+                           3]}]
+             (result r0))))))
+
 (deftest long-chain-expression
   (with-merged-config
     {:min-level :debug
