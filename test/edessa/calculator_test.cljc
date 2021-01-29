@@ -160,7 +160,7 @@
 (defn combine-subexpr
   ([] {})
   ([v1 v2]
-   (println v1 v2)
+   (debug "combine-subexpr: " v1 v2)
    (cond
      (= v1 {}) v2
      (and (= 1 (count (:operands v2)))
@@ -174,8 +174,9 @@
      :else
      (assoc v2
             :operands
-            (conj (into [] (:operands v2))
-                  v1)))))
+            (cons v1
+                  (into [] (:operands v2))
+                  )))))
 
 (defn create-subexpr-fragment [x]
   (let [xs (filter not-nil? x)]
@@ -190,7 +191,9 @@
                     (trace (parser (then star-token factor)
                                    :using create-subexpr-fragment
                                    :name "Term branch - (* <factor>)"))
-                    (then slash-token factor)))
+                    (parser (then slash-token factor)
+                            :using create-subexpr-fragment
+                            :name "Term branch - (/ <factor>)")))
 
                   ))
                   :using
@@ -261,7 +264,7 @@
     (let [input "1 * 2 * 3"
           r0 (parse-calc-text input)]
       (is (success? r0))
-      (is (= '[{:operator :multiply, :operands [3 {:operator :multiply, :operands [1 2]}]}]
+      (is (= '[{:operator :multiply, :operands [{:operator :multiply, :operands [1 2]} 3]}]
              (result r0))))))
 
 (deftest long-chain-expression
@@ -271,9 +274,30 @@
     (let [input "1 * 2 * 3*4"
           r0 (parse-calc-text input)]
       (is (success? r0))
-      (is (= '[{:operator :multiply, :operands [4 {:operator :multiply
-, :operands [3 {:operator :multiply, :operands [1 2]}]}]}]
+      (is (= '[{:operator :multiply, :operands [{:operator :multiply
+, :operands [{:operator :multiply, :operands [1 2]} 3]} 4]}]
              (result r0))))))
+
+(deftest long-multiply-and-divide-chain-expression
+  (with-merged-config
+    {:min-level :info
+     :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}}
+    (let [input "1 * 2 * 3*4/5"
+          r0 (parse-calc-text input)]
+      (is (success? r0))
+      (is (= '[{:operator :divide
+                :operands[{:operator :multiply,
+                           :operands [
+                                      {:operator :multiply, 
+                                       :operands [
+                                                  {:operator :multiply, 
+                                                   :operands [1 2]}
+                                                 3 
+                                                  ]} 4 
+                                      ]}
+                          5]}]
+             (result r0))))))
+
 (deftest shorter-chain-expression2
   (with-merged-config
     {:min-level :info
