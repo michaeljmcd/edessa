@@ -225,21 +225,33 @@
       expr
       (log-result "Parse")))
 
+(defn eval-calc [expr]
+  (if (number? expr) expr
+    (let [opr-list {:add #'+ :subtract #'- :multiply #'* :divide #'/}
+          opr-fn (get opr-list (:operator expr))]
+      (apply opr-fn (map eval-calc (:operands expr)))
+      )
+    ))
+
+(defn eval-result [r]
+  (eval-calc (first (result r))))
+
 (deftest atomic-number-expression
   (with-level :error
     (let [input "39"
           r0 (parse-calc-text input)]
       (is (success? result))
-      (is (= '[39] (result r0))))))
+      (is (= '[39] (result r0)))
+      (is (= 39 (eval-result r0))))))
 
 (deftest simple-addition-expression
   (with-level :error
     (let [input "1 + 1"
           r0 (parse-calc-text input)]
-      (debug "1 + 1 result: " (pr-str result))
       (is (success? r0))
       (is (= '({:operator :add :operands [1 1]})
-             (result r0))))))
+             (result r0)))
+      (is (= 2 (eval-result r0))))))
 
 (deftest subtraction-with-negatives-expression
   (with-level :error
@@ -249,7 +261,8 @@
       (is (success? r0))
       (is (= '[{:operator :subtract
                 :operands [-1 -1]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 0 (eval-result r0))))))
 
 (deftest shorter-chain-expression
   (with-merged-config
@@ -260,7 +273,8 @@
           r0 (parse-calc-text input)]
       (is (success? r0))
       (is (= '[{:operator :multiply, :operands [{:operator :multiply, :operands [1 2]} 3]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 6 (eval-result r0))))))
 
 (deftest long-chain-expression
   (with-merged-config
@@ -271,7 +285,8 @@
       (is (success? r0))
       (is (= '[{:operator :multiply, :operands [{:operator :multiply
                                                  , :operands [{:operator :multiply, :operands [1 2]} 3]} 4]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 24 (eval-result r0))))))
 
 (deftest long-chain-expression2
   (with-merged-config
@@ -282,7 +297,8 @@
       (is (success? r0))
       (is (= '[{:operator :add, :operands [{:operator :add
                                             , :operands [{:operator :add, :operands [1 2]} 3]} 4]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 10 (eval-result r0))))))
 
 (deftest long-multiply-and-divide-chain-expression
   (with-merged-config
@@ -298,29 +314,28 @@
                                                     :operands [1 2]}
                                                    3]} 4]}
                            5]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 24/5 (eval-result r0))))))
 
 (deftest shorter-chain-expression2
   (with-merged-config
-    {:min-level :info
-    ; :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}
-     }
+    {:min-level :info }
     (let [input "1 * (2 + 3)"
           r0 (parse-calc-text input)]
       (is (success? r0))
       (is (= '[{:operator :multiply, :operands [1 {:operator :add, :operands [2 3]}]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 5 (eval-result r0))))))
 
 (deftest shorter-chain-expression3
   (with-merged-config
-    {:min-level :info
-    ; :appenders {:spit (spit-appender {:fname "./timbre-spit.log"})}
-     }
+    {:min-level :info }
     (let [input "(1 * (2 - 3))"
           r0 (parse-calc-text input)]
       (is (success? r0))
       (is (= '[{:operator :multiply, :operands [1 {:operator :subtract, :operands [2 3]}]}]
-             (result r0))))))
+             (result r0)))
+      (is (= -1 (eval-result r0))))))
 
 (deftest mixed-long-chain-expression
   (with-merged-config
@@ -336,7 +351,8 @@
                             :operands [4
                                        {:operator :multiply,
                                         :operands [111 5]}]}]}]
-             (result r0))))))
+             (result r0)))
+      (is (= -666000 (eval-result r0))))))
 
 (deftest simple-multiplication
   (with-level :error
@@ -344,7 +360,8 @@
           r0 (parse-calc-text input)]
       (is (success? r0))
       (is (= '[{:operator :multiply :operands [371 44]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 16324 (eval-result r0))))))
 
 (deftest chain-multiplication
   (with-level :error
@@ -355,20 +372,10 @@
                 :operands [100
                            {:operator :multiply
                             :operands [200 300]}]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 6000000 (eval-result r0))))))
 
 (deftest chain-multiplication2
-  (with-level :error
-    (let [input "100 * (200*300)"
-          r0 (parse-calc-text input)]
-      (is (success? r0))
-      (is (= '[{:operator :multiply
-                :operands [100
-                           {:operator :multiply
-                            :operands [200 300]}]}]
-             (result r0))))))
-
-(deftest chain-multiplication3
   (with-level :error
     (let [input "100 * (200*(300*400))"
           r0 (parse-calc-text input)]
@@ -379,7 +386,8 @@
                             :operands [200
                                        {:operator :multiply
                                         :operands [300 400]}]}]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 2400000000 (eval-result r0))))))
 
 (deftest parenthesized-expressions
   (with-level :error
@@ -387,7 +395,8 @@
           r0 (parse-calc-text input)]
       (is (success? result))
       (is (= '[{:operator :multiply :operands [44.1 33]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 1455.3 (eval-result r0))))))
 
 (deftest simple-compound-expression
   (with-level :error
@@ -397,4 +406,5 @@
       (is (= '[{:operator :multiply
                 :operands [3 {:operator :add
                               :operands [1 2]}]}]
-             (result r0))))))
+             (result r0)))
+      (is (= 9 (eval-result r0))))))
