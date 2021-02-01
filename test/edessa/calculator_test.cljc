@@ -227,11 +227,9 @@
 
 (defn eval-calc [expr]
   (if (number? expr) expr
-    (let [opr-list {:add #'+ :subtract #'- :multiply #'* :divide #'/}
-          opr-fn (get opr-list (:operator expr))]
-      (apply opr-fn (map eval-calc (:operands expr)))
-      )
-    ))
+      (let [opr-list {:add #'+ :subtract #'- :multiply #'* :divide #'/}
+            opr-fn (get opr-list (:operator expr))]
+        (apply opr-fn (map eval-calc (:operands expr))))))
 
 (defn eval-result [r]
   (eval-calc (first (result r))))
@@ -319,7 +317,7 @@
 
 (deftest shorter-chain-expression2
   (with-merged-config
-    {:min-level :info }
+    {:min-level :info}
     (let [input "1 * (2 + 3)"
           r0 (parse-calc-text input)]
       (is (success? r0))
@@ -329,7 +327,7 @@
 
 (deftest shorter-chain-expression3
   (with-merged-config
-    {:min-level :info }
+    {:min-level :info}
     (let [input "(1 * (2 - 3))"
           r0 (parse-calc-text input)]
       (is (success? r0))
