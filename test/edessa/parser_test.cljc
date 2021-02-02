@@ -223,3 +223,19 @@
              :failed true}
            r0))
     ))
+
+(deftest simple-custom-error-message
+  (let [p (parser (then (star (match \a))
+                        (match \b))
+                  :error (fn [x] (assoc x :error "Unicorns")))
+        r0 (apply-parser p "aaa")]
+    (is (failure? r0))
+    (is (= '{:input ()
+             :position 3
+             :line-number 0
+             :column 3
+             :result []
+             :error "Unicorns"
+             :failed true}
+           r0))
+    ))
