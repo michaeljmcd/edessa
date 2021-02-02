@@ -192,3 +192,34 @@
     (is (success? r0))
     (is (= '[\a] (result r0)))
     (is (not (input-consumed? r0)))))
+
+(deftest simple-singleline-error
+  (let [p (then (star (match \a))
+                (match \b))
+        r0 (apply-parser p "aaa")]
+    (is (failure? r0))
+    (is (= '{:input ()
+             :position 3
+             :line-number 0
+             :column 3
+             :result []
+             :error "The value 'null' does not match the expected value of 'b'."
+             :failed true}
+           r0))
+    ))
+
+(deftest simple-multiline-error
+  (let [p (then (star (match \a))
+                (match \newline)
+                (match \z))
+        r0 (apply-parser p "aaaaaaaa\nb")]
+    (is (failure? r0))
+    (is (= '{:input (\b), 
+             :position 9, 
+             :line-number 1, 
+             :column 0, 
+             :result [], 
+             :error "The value 'b' does not match the expected value of 'z'.",
+             :failed true}
+           r0))
+    ))
