@@ -205,8 +205,7 @@
              :result []
              :error "The value 'null' does not match the expected value of 'b'."
              :failed true}
-           r0))
-    ))
+           r0))))
 
 (deftest simple-multiline-error
   (let [p (then (star (match \a))
@@ -214,15 +213,14 @@
                 (match \z))
         r0 (apply-parser p "aaaaaaaa\nb")]
     (is (failure? r0))
-    (is (= '{:input (\b), 
-             :position 9, 
-             :line-number 1, 
-             :column 0, 
-             :result [], 
+    (is (= '{:input (\b),
+             :position 9,
+             :line-number 1,
+             :column 0,
+             :result [],
              :error "The value 'b' does not match the expected value of 'z'.",
              :failed true}
-           r0))
-    ))
+           r0))))
 
 (deftest simple-custom-error-message
   (let [p (parser (then (star (match \a))
@@ -237,5 +235,4 @@
              :result []
              :error "Unicorns"
              :failed true}
-           r0))
-    ))
+           r0))))
