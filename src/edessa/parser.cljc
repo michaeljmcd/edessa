@@ -4,7 +4,12 @@
 
 ; General parsing functions and combinators.
 
-(defn make-input [inp]
+(defn make-input 
+  "Accepts a sequence of objects *inp* (generally a string) and wraps it 
+   to create an object representing parser state. This wrapped
+   value includes the remaining input, position, line number, result and error
+   handling information."
+  [inp]
   {:input inp
    :position 0
    :line-number 0
@@ -13,17 +18,31 @@
    :failed false
    :error nil})
 
-(defn mask-result [inp]
+(defn mask-result
+  "Accepts returns a copy of a parser state object *inp* with the result
+   removed."
+  [inp]
   (assoc inp :result []))
 
-(defn apply-parser [p inp]
+(defn apply-parser 
+  "A convenience function that applies a parser *p* to input *inp*.
+   If *inp* is not a map, it will first be passed to *make-input* to create
+   a valid parser state object."
+  [p inp]
   (if (map? inp)
     (p inp)
     (p (make-input inp))))
 
-(defn result [inp] (get inp :result))
+(defn result 
+  "A convenience function to return the result from a parser state object *inp*."
+  [inp]
+  (get inp :result))
 
-(defn succeed {:parser "Succeed"} [v inp]
+(defn succeed 
+  "Accepts a value *v* and a parser state object *inp* and returns an
+   an updated parser state with *v* appended to the result of *inp*."
+  {:parser "Succeed"} 
+  [v inp]
   (assoc inp :result (conj (result inp) v)))
 
 (defn succeed! {:parser "Succeed!"} [v inp]
@@ -159,7 +178,7 @@
             (if (input-consumed? inp)
               inp
               (let [r (p inp)]
-                (debug "Z*: Parser " (parser-name p) " yielded " r)
+                (debug "Z*: Parser " (parser-name p) " yielded " (str r))
                 (if (failure? r)
                   (do
                     (debug "Z*: Hit end of matches, returning " inp)
@@ -170,7 +189,8 @@
        (let [result (accumulate (assoc inp :result []))]
          (assoc result
                 :result
-                (conj (:result inp) (:result result)))))
+                (conj (:result inp) (:result result))
+                )))
      :name (str "Zero or more " (parser-name p)))))
 
 (def star zero-or-more)
