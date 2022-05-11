@@ -45,18 +45,29 @@
   [v inp]
   (assoc inp :result (conj (result inp) v)))
 
-(defn succeed! {:parser "Succeed!"} [v inp]
+(defn succeed!
+  "Accepts a value *v* and a parser state *inp* and returns *inp*
+   with the result replaced with *v*."
+  {:parser "Succeed!"}
+  [v inp]
   (assoc inp :result v))
 
-(defn parser-name [parser] (-> parser meta :parser))
+(defn parser-name 
+  "A convenience function to return the name of a parser function from metadata."
+  [parser] 
+  (-> parser meta :parser))
 
-(defn with-name [p name]
+(defn with-name 
+  "Accepts a parser *p* and returns a copy of that parser with the parser name set to *name*."
+  [p name]
   (if (nil? name)
     p
     (let [orig-meta (meta p)]
       (with-meta p (assoc orig-meta :parser name)))))
 
-(defn failure? [r]
+(defn failure? 
+  "A convenience function that returns a truthy value if the parser state *r* is in a failure state."
+  [r]
   (get r :failed))
 
 (def success? (comp not failure?))
