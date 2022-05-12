@@ -70,9 +70,14 @@
   [r]
   (get r :failed))
 
-(def success? (comp not failure?))
+(def success? 
+  "A convenience function that accepts a parser state variable *r* and returns true if it represents a success state."
+  (comp not failure?))
 
-(defn alarm [p err-fn]
+(defn alarm 
+  "Accepts a parser *p* and an error handler *error-fn* and returns a parser that calls
+  *p* and invokes *error-fn* on the result if it is a failure."
+  [p err-fn]
   (if (nil? err-fn)
     p
     (fn [x]
@@ -81,7 +86,9 @@
           (err-fn r)
           r)))))
 
-(defn using [parser transformer]
+(defn using 
+  "Returns a new parser that runs *transformer* on the result from *parser* on success."
+  [parser transformer]
   (if (nil? transformer)
     parser
     (with-name
@@ -94,13 +101,17 @@
                       r))))
       (str (parser-name parser) " [+ Transformer]"))))
 
-(defn parser [p & {:keys [error using name]}]
+(defn parser 
+  "A function for declaring a parser, optionally adding an error function, a transformer and/or a name."
+  [p & {:keys [error using name]}]
   (-> p
       (alarm error)
       (edessa.parser/using using)
       (with-name name)))
 
-(defn discard [p]
+(defn discard 
+  "A transformer that accepts a parser *p* and returns a version that discards its output while retaining a successful result."
+  [p]
   (parser
    (fn [inp]
      (let [input-result (get inp :result)]
@@ -109,6 +120,7 @@
    :name (str (parser-name p) ", discarding output")))
 
 (defn advance
+  "Advances the parser state *inp* by incrementing position and adjusting line and column numbers appropriately."
   ([inp]
    (let [{left :input
           pos :position
@@ -130,15 +142,23 @@
       :failed fail}))
   ([inp v] (advance (succeed v inp))))
 
-(defn remaining [inp] (get inp :input))
+(defn remaining 
+  "Returns the unprocessed input in parser state *inp*."
+  [inp]
+  (get inp :input))
 
-(defn look [inp]
+(defn look
+  "Peeks at the next value in the input stream of parser state *inp* without advancing."
+  [inp]
   (first (get inp :input)))
 
 (def epsilon
+  "An empty parser that returns no result and consumes no input."
   (parser identity :name "Epsilon (empty)"))
 
-(defn fail {:parser "Fail"}
+(defn fail
+  "Returns a new instance of the state *inp* with failure indicated, optionally including a failure message to be indicated."
+ {:parser "Fail"}
   ([inp]
    (if (nil? (:error inp))
      (fail inp "Parsing failed")
@@ -148,13 +168,26 @@
        (assoc :error message)
        (assoc :failed true))))
 
-(defn input-consumed? [r]
+(defn input-consumed?
+  "Returns true if the parser state *r* has all input consumed."
+  [r]
   (and (success? r)
        (empty? (get r :input))))
 
-(def input-remaining? (comp not input-consumed?))
+(def input-remaining? 
+  "Returns true if the passed parser state has unprocessed input. The inverse of input-consumed?"
+  (comp not input-consumed?))
 
 (defn match
+  "Accepts a value *c* and returns a parser that matches that single value.
+
+  For example,
+    
+  ```
+    (match \\newline)
+  ```
+
+  Returns a parser that will match a single newline."
   ([c]
    (parser
     (fn [inp]
@@ -164,7 +197,17 @@
         (fail inp (format "The value '%s' does not match the expected value of '%s'.", (look inp) c))))
     :name (str "Matches " c))))
 
-(defn match-with [pred]
+(defn match-with
+  "Accepts a predicate and returns a parser that matches input when that predicate returns true.
+
+  For example,
+
+  ```
+    (match-with (fn [x] (odd? x)))
+  ```
+
+  Would return a parser that matches odd numbers in the input stream."
+  [pred]
   (parser
    (fn [inp]
      (let [current (look inp)]
@@ -173,7 +216,17 @@
          (fail inp (format "The value %s does not satisfy the required conditions." current)))))
    :name (str "Match-with " pred)))
 
-(defn not-one-of [chars]
+(defn not-one-of
+  "Accepts a list of values (characters, for example) and returns a parser that matches any value in the list.
+
+  For example,
+
+  ```
+    (not-one-of [\\a \\b \\c])
+  ```
+
+  Would match any character except 'a', 'b' or 'c'."
+  [chars]
   (parser
    (fn [inp]
      (let [x (look inp)]
@@ -183,7 +236,9 @@
          (advance inp x))))
    :name (str "Not one of [" chars "]")))
 
-(defn zero-or-more [p]
+(defn zero-or-more
+  "A parser combinator that accepts a parser *p* and returns a parser that matches *p* zero or more times."
+  [p]
   (letfn [(accumulate [inp]
             (debug "Z*: " (parser-name parser) " Input: " inp)
             (if (input-consumed? inp)
@@ -204,7 +259,7 @@
                 )))
      :name (str "Zero or more " (parser-name p)))))
 
-(def star zero-or-more)
+(def star "Convenient alias for zero-or-more." zero-or-more)
 
 (defn choice
   ([]
