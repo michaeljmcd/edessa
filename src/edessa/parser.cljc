@@ -104,8 +104,8 @@
         (let [r (apply-parser parser (assoc inp :result []))]
           (if (failure? r)
             r
-            (succeed! (conj (:result inp)
-                            (-> r :result transformer))
+            (succeed! (concat (:result inp)
+                            (list (-> r :result transformer)))
                       r))))
       (str (parser-name parser) " [+ Transformer]"))))
 
