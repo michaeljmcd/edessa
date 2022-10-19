@@ -43,7 +43,15 @@
    an updated parser state with *v* appended to the result of *inp*."
   {:parser "Succeed"} 
   [v inp]
-  (assoc inp :result (conj (result inp) v)))
+  (let [res
+    (cond
+      (nil? v) (result inp)
+      (sequential? v) 
+        (if (empty? (result inp))
+          (list v)
+          (concat (result inp) v))
+      :else (concat (result inp) (list v)))]
+  (assoc inp :result res)))
 
 (defn succeed!
   "Accepts a value *v* and a parser state *inp* and returns *inp*
