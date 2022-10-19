@@ -270,6 +270,7 @@
 (def star "Convenient alias for zero-or-more." zero-or-more)
 
 (defn choice
+  "Accepts zero or more parsers, returning the first successful parser's result."
   ([]
    (parser fail :name "Fail"))
   ([parser1]
@@ -285,14 +286,19 @@
   ([parser1 parser2 & parsers]
    (fold choice (concat [parser1 parser2] parsers))))
 
-(defn optional [p]
+(defn optional
+  "Returns the result of parser `p` if successful and empty success if the parser fails. Corresponds to the ? operator."
+  [p]
   (parser (choice p epsilon)
           :name (str (parser-name p) "?")))
 
-(defn one-of [chars]
+(defn one-of
+  "Creates a parser that succeeds if input matches any of the objects in `chars`."
+  [chars]
   (apply choice (map #(match %) chars)))
 
 (defn then
+  "A combinator that accepts zero or more parsers and returns a parser that applies each parser successively against input."
   ([] (parser epsilon :name "Epsilon"))
   ([parser1] (parser parser1 :name (parser-name parser1)))
   ([parser1 parser2]
@@ -320,16 +326,22 @@
       :name parser-name)))
   ([parser1 parser2 & parsers] (fold then (cons parser1 (cons parser2 parsers)))))
 
-(defn literal [lit]
+(defn literal
+  "Creates a parser that succeeds whenever the input matches `lit`."
+  [lit]
   (parser (apply then (map match lit))
           :name (str "Literal [" lit "]")))
 
-(defn one-or-more [parser]
+(defn one-or-more
+  "A combinator that succeeds when `parser` matches one or more times. Corresponds to the + operator."
+  [parser]
   (then parser (star parser)))
 
-(def plus one-or-more)
+(def plus "An alias for `one-or-more`." one-or-more)
 
-(defn trace [p]
+(defn trace
+  "Trace wraps parser `p` in debug statements. Not recommended for production code, but useful for troubleshooting."
+  [p]
   (let [name (parser-name p)]
     (parser
      (fn [x]
