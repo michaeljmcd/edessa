@@ -2,6 +2,11 @@
   (:require [clojure.core.reducers :refer [fold]]
             [taoensso.timbre :as t :refer [debug error]]))
 
+(defn fmt [& args]
+  (let [f #?(:clj format
+             :cljs goog.string.format)]
+    (apply f args)))
+
 ; General parsing functions and combinators.
 
 (defn make-input 
@@ -202,7 +207,7 @@
       (if (and (input-remaining? inp)
                (= (look inp) c))
         (advance inp c)
-        (fail inp (format "The value '%s' does not match the expected value of '%s'.", (look inp) c))))
+        (fail inp (fmt "The value '%s' does not match the expected value of '%s'.", (look inp) c))))
     :name (str "Matches " c))))
 
 (defn match-with
@@ -221,7 +226,7 @@
      (let [current (look inp)]
        (if (pred current)
          (advance inp current)
-         (fail inp (format "The value %s does not satisfy the required conditions." current)))))
+         (fail inp (fmt "The value %s does not satisfy the required conditions." current)))))
    :name (str "Match-with " pred)))
 
 (defn not-one-of
@@ -240,7 +245,7 @@
      (let [x (look inp)]
        (if (or (input-consumed? inp)
                (some (partial = x) chars))
-         (fail inp (format "Value '%s' is not one of %s" x chars))
+         (fail inp (fmt "Value '%s' is not one of %s" x chars))
          (advance inp x))))
    :name (str "Not one of [" chars "]")))
 
