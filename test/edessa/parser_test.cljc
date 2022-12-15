@@ -236,3 +236,16 @@
              :error "Unicorns"
              :failed true}
            r0))))
+
+(deftest match-times-test
+  (let [p (parser (times 3 (match \a)))
+        r (apply-parser p "aaa")]
+    (is (success? r))
+    (is (= '{:input ()
+             :position 3
+             :line-number 0
+             :column 3
+             :result [\a \a \a]
+             :error nil
+             :failed false}
+           r))))

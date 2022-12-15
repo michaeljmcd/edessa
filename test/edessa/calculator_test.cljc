@@ -24,13 +24,13 @@
 (def minus (parser (match \-)
                    :using (fn [_] {:token :operator :value "-"})))
 
-(def times (parser (match \*)
+(def multiply (parser (match \*)
                    :using (fn [_] {:token :operator :value "*"})))
 
 (def divide (parser (match \/)
                     :using (fn [_] {:token :operator :value "/"})))
 
-(def operator (parser (choice plus1 minus times divide)))
+(def operator (parser (choice plus1 minus multiply divide)))
 
 (def number (parser (then
                      (optional (match \-))

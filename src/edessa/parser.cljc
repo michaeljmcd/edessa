@@ -355,3 +355,8 @@
          (debug parser-name "produced result: " r0)
          r0))
      :name (str name " [+Trace]"))))
+
+(defn times
+  "Accepts a parser `p` and matches it exactly `n` times. Equivalent to the `{n}` operator in regular expressions."
+  [n p]
+  (apply then (repeat n p)))
