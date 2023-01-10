@@ -114,13 +114,30 @@
                       r))))
       (str (parser-name parser) " [+ Transformer]"))))
 
+(defn contextually-using
+  "Like `using`, but passes both the parser output and the parser state to the transformer function."
+  [parser transformer]
+  (if (nil? transformer)
+      parser
+      (with-name
+        (fn [inp]
+          (let [r (apply-parser parser (assoc inp :result []))
+                t (partial transformer r)]
+            (if (failure? r)
+              r
+              (succeed! (concat (:result inp)
+                                (list (-> r :result t)))
+                        r))))
+        (str (parser-name parser) " [+ Context Transformer]"))))
+
 (defn parser 
   "A function for declaring a parser, optionally adding an error function, a transformer and/or a name."
-  [p & {:keys [error using name]}]
+  [p & {:keys [error using name contextually-using]}]
   (-> p
       (alarm error)
       (edessa.parser/using using)
-      (with-name name)))
+      (with-name name)
+      (edessa.parser/contextually-using contextually-using)))
 
 (defn discard 
   "A transformer that accepts a parser *p* and returns a version that discards its output while retaining a successful result."

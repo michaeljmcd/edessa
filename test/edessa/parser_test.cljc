@@ -133,6 +133,16 @@
 
     (is (failure? r1))))
 
+(deftest contextually-using-combinator
+  (let [p (contextually-using (match \a) (fn [c x] {:result x :line (:line-number c)}))
+          r0 (apply-parser p "abc")
+          r1 (apply-parser p "dabc")]
+      (is (success? r0))
+      (is (= [\b \c] (remaining r0)))
+      (is (= [{:result [\a] :line 0}] (result r0)))
+
+      (is (failure? r1))))
+
 (deftest then-combinator
   (let [p (then)
         r0 (apply-parser p "asdf")]
