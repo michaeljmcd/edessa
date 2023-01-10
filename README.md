@@ -22,7 +22,7 @@ introductory examples.
 Edessa uses [Clojure Deps](https://clojure.org/guides/deps_and_cli) for
 dependency management. To run the test suite, run
 
-  clj -X:kaocha
+  clj -M:kaocha
 
 The main code all lives in `edessa.parser`. Similarly, documentation can be
 generated with Codox by running
