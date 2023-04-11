@@ -13,7 +13,7 @@ scratch.
 No artifacts are currently published (though this will change eventually), but a
 git dependency can be indicated in `deps.edn` like so:
 
-```
+```clojure
   {:deps {github-michaeljmcd/edessa {:git/url "https://github.com/michaeljmcd/edessa"
                                      :sha "5610465d68dfbfc82b412abe1a142d871a52d17e"}}
 ```
