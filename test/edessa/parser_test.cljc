@@ -43,6 +43,12 @@
     (is (= {:input "baa", :position 0, :line-number 0, :column 0, :result [], :failed true, :error "The value 'b' does not match the expected value of 'a'."}
            (apply-parser p "baa"))))
 
+  (let [res (apply-parser end "")]
+    (is (success? res)))
+
+  (let [res (apply-parser end "a")]
+    (is (failure? res)))
+
   (let [p (not-one-of [\a \b \c])
         r (apply-parser p "dabc")]
     (is (success? r))

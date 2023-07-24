@@ -377,3 +377,12 @@
   "Accepts a parser `p` and matches it exactly `n` times. Equivalent to the `{n}` operator in regular expressions."
   [n p]
   (apply then (repeat n p)))
+
+(def end
+  "A parser that returns true if the input has been consumed."
+  (parser
+    (fn [inp]
+      (if (empty? (remaining inp))
+        (advance inp :end-of-stream)
+        (fail inp "Input still remains")))
+    :name "End of Input"))
